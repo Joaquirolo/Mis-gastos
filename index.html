@@ -8,10 +8,20 @@
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Mis Gastos</title>
+  <script>
+    // Aplica el tema guardado antes de mostrar la página (evita parpadeos)
+    try {
+      var t = localStorage.getItem('tema');
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) {}
+  </script>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <header><h1>Mis Gastos</h1></header>
+  <header>
+    <h1>Mis Gastos</h1>
+    <button type="button" id="btnTema" aria-label="Cambiar entre modo claro y oscuro">🌙</button>
+  </header>
 
   <main>
     <!-- INICIO -->
@@ -160,6 +170,29 @@
   <script src="js/app.js"></script>
   <script type="module" src="js/sync.js"></script>
   <script>
+    // Botón de tema claro / oscuro
+    (function () {
+      var btn = document.getElementById('btnTema');
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      function oscuro() {
+        var t = document.documentElement.dataset.theme;
+        return t ? t === 'dark' : mq.matches;
+      }
+      function pintarTema() {
+        btn.textContent = oscuro() ? '☀️' : '🌙';
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.content = oscuro() ? '#1e3a8a' : '#2563eb';
+      }
+      btn.addEventListener('click', function () {
+        var nuevo = oscuro() ? 'light' : 'dark';
+        document.documentElement.dataset.theme = nuevo;
+        try { localStorage.setItem('tema', nuevo); } catch (e) {}
+        pintarTema();
+      });
+      mq.addEventListener('change', pintarTema);
+      pintarTema();
+    })();
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
