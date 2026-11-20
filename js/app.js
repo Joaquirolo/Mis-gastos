@@ -24,6 +24,47 @@ const soles = n => 'S/ ' + n.toFixed(2);
 const fechaStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const hoy = () => fechaStr(new Date());
 
+// ---------- Conexión con la nube (sync.js) ----------
+// Guarda la configuración en el dispositivo y, si hay sesión, también en la nube
+function guardarConfig() {
+  guardar('etiquetas', etiquetas);
+  guardar('presupuestos', presupuestos);
+  guardar('recurrentes', recurrentes);
+  guardar('metas', metas);
+  window.nube?.guardarConfig?.({ etiquetas, presupuestos, recurrentes, metas });
+}
+const nubeGuardarMov = m => window.nube?.guardarMov?.(m);
+const nubeBorrarMov = id => window.nube?.borrarMov?.(id);
+
+window.obtenerDatos = () => ({ movimientos, etiquetas, presupuestos, recurrentes, metas });
+
+// sync.js llama a esto cuando llegan datos de la nube
+window.aplicarNube = function (d) {
+  if (d.movimientos) {
+    movimientos = d.movimientos;
+    guardar('movimientos', movimientos);
+  }
+  if (d.config) {
+    const c = d.config;
+    if (c.etiquetas && c.etiquetas.length) etiquetas = c.etiquetas;
+    presupuestos = c.presupuestos || {};
+    recurrentes = c.recurrentes || [];
+    metas = c.metas || [];
+    guardar('etiquetas', etiquetas);
+    guardar('presupuestos', presupuestos);
+    guardar('recurrentes', recurrentes);
+    guardar('metas', metas);
+    pintarEtiquetas();
+  }
+  pintar();
+};
+
+// sync.js llama a esto cuando termina de cargar todo desde la nube
+window.alIniciarNube = function () {
+  generarRecurrentes();
+  pintar();
+};
+
 // ---------- Periodo ----------
 let periodo = 'mes';
 let ref = new Date();
@@ -84,15 +125,17 @@ document.getElementById('fecha').value = hoy();
 // ---------- Etiquetas ----------
 function pintarEtiquetas() {
   const opciones = etiquetas.map(e => `<option>${e}</option>`).join('');
-  selEtiqueta.innerHTML = opciones;
-  selPresEtiqueta.innerHTML = opciones;
-  selRecEtiqueta.innerHTML = opciones;
+  [selEtiqueta, selPresEtiqueta, selRecEtiqueta].forEach(s => {
+    const previa = s.value;
+    s.innerHTML = opciones;
+    if (etiquetas.includes(previa)) s.value = previa;
+  });
 }
 document.getElementById('btnNuevaEtiqueta').addEventListener('click', () => {
   const nueva = prompt('Nombre de la nueva etiqueta:');
   if (nueva && !etiquetas.includes(nueva.trim())) {
     etiquetas.push(nueva.trim());
-    guardar('etiquetas', etiquetas);
+    guardarConfig();
     pintarEtiquetas();
     selEtiqueta.value = nueva.trim();
   }
@@ -102,7 +145,7 @@ document.getElementById('btnNuevaEtiqueta').addEventListener('click', () => {
 form.addEventListener('submit', e => {
   e.preventDefault();
   const mov = {
-    id: Date.now(),
+    id: String(Date.now()),
     tipo: form.tipo.value,
     monto: parseFloat(document.getElementById('monto').value),
     etiqueta: selEtiqueta.value,
@@ -111,6 +154,7 @@ form.addEventListener('submit', e => {
   };
   movimientos.push(mov);
   guardar('movimientos', movimientos);
+  nubeGuardarMov(mov);
   form.reset();
   document.getElementById('fecha').value = hoy();
   pintar();
@@ -118,8 +162,9 @@ form.addEventListener('submit', e => {
 });
 
 function eliminar(id) {
-  movimientos = movimientos.filter(m => m.id !== id);
+  movimientos = movimientos.filter(m => String(m.id) !== String(id));
   guardar('movimientos', movimientos);
+  nubeBorrarMov(id);
   pintar();
 }
 
@@ -145,14 +190,14 @@ function avisarPresupuesto(mov) {
 document.getElementById('formPres').addEventListener('submit', e => {
   e.preventDefault();
   presupuestos[selPresEtiqueta.value] = parseFloat(document.getElementById('presMonto').value);
-  guardar('presupuestos', presupuestos);
+  guardarConfig();
   document.getElementById('presMonto').value = '';
   pintarPresupuestos();
 });
 
 function borrarPresupuesto(etiqueta) {
   delete presupuestos[etiqueta];
-  guardar('presupuestos', presupuestos);
+  guardarConfig();
   pintarPresupuestos();
 }
 
@@ -188,7 +233,8 @@ function pintarPresupuestos() {
 }
 
 // ---------- Recurrentes ----------
-// Genera los movimientos de los meses que aún no se han registrado
+// Genera los movimientos de los meses que aún no se han registrado.
+// El id es fijo (recurrente + mes) para que dos dispositivos no dupliquen el mismo cobro.
 function generarRecurrentes() {
   const hoyStr = hoy();
   const ahora = new Date();
@@ -200,15 +246,19 @@ function generarRecurrentes() {
       const dd = Math.min(r.dia, new Date(y, m + 1, 0).getDate());
       const fecha = fechaStr(new Date(y, m, dd));
       const ym = fecha.slice(0, 7);
-      if (fecha >= r.inicio && fecha <= hoyStr && ym > r.ultimo) {
-        movimientos.push({
-          id: Date.now() + Math.floor(Math.random() * 100000),
+      if (fecha >= r.inicio && fecha <= hoyStr && ym > (r.ultimo || '')) {
+        const mov = {
+          id: `r${r.id}_${ym}`,
           tipo: r.tipo,
           monto: r.monto,
           etiqueta: r.etiqueta,
           fecha,
           nota: (r.nota || 'Recurrente') + ' ↻'
-        });
+        };
+        if (!movimientos.some(x => String(x.id) === mov.id)) {
+          movimientos.push(mov);
+          nubeGuardarMov(mov);
+        }
         r.ultimo = ym;
         hubo = true;
       }
@@ -219,7 +269,7 @@ function generarRecurrentes() {
 
   if (hubo) {
     guardar('movimientos', movimientos);
-    guardar('recurrentes', recurrentes);
+    guardarConfig();
   }
 }
 
@@ -235,7 +285,7 @@ document.getElementById('formRec').addEventListener('submit', e => {
     inicio: hoy(),
     ultimo: ''
   });
-  guardar('recurrentes', recurrentes);
+  guardarConfig();
   e.target.reset();
   generarRecurrentes();
   pintar();
@@ -243,7 +293,7 @@ document.getElementById('formRec').addEventListener('submit', e => {
 
 function borrarRecurrente(id) {
   recurrentes = recurrentes.filter(r => r.id !== id);
-  guardar('recurrentes', recurrentes);
+  guardarConfig();
   pintarRecurrentes();
 }
 
@@ -271,7 +321,7 @@ document.getElementById('formMeta').addEventListener('submit', e => {
     ahorrado: 0,
     fecha: document.getElementById('metaFecha').value
   });
-  guardar('metas', metas);
+  guardarConfig();
   e.target.reset();
   pintarMetas();
 });
@@ -282,14 +332,14 @@ function aportarMeta(id) {
   if (!txt || isNaN(n)) return;
   const meta = metas.find(m => m.id === id);
   meta.ahorrado = Math.max(0, meta.ahorrado + n);
-  guardar('metas', metas);
+  guardarConfig();
   pintarMetas();
 }
 
 function borrarMeta(id) {
   if (!confirm('¿Eliminar esta meta?')) return;
   metas = metas.filter(m => m.id !== id);
-  guardar('metas', metas);
+  guardarConfig();
   pintarMetas();
 }
 
@@ -329,7 +379,7 @@ function descargar(nombre, contenido, tipo) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-const movsOrdenados = () => [...movimientos].sort((a, b) => a.fecha.localeCompare(b.fecha) || a.id - b.id);
+const movsOrdenados = () => [...movimientos].sort((a, b) => a.fecha.localeCompare(b.fecha) || String(a.id).localeCompare(String(b.id)));
 
 document.getElementById('btnCSV').addEventListener('click', () => {
   if (!movimientos.length) return alert('No hay movimientos para exportar.');
@@ -341,7 +391,7 @@ document.getElementById('btnCSV').addEventListener('click', () => {
 });
 
 document.getElementById('btnExcel').addEventListener('click', () => {
-  if (typeof XLSX === 'undefined') return alert('No se pudo cargar la librería de Excel. Conéctate a internet y recarga la página.');
+  if (typeof XLSX === 'undefined') return alert('No se pudo cargar la librería de Excel. Recarga la página.');
   if (!movimientos.length) return alert('No hay movimientos para exportar.');
 
   const hojaMov = [['Fecha', 'Tipo', 'Etiqueta', 'Monto (S/)', 'Nota']]
@@ -383,20 +433,34 @@ document.getElementById('archivoRespaldo').addEventListener('change', e => {
   const archivo = e.target.files[0];
   if (!archivo) return;
   const lector = new FileReader();
-  lector.onload = () => {
+  lector.onload = async () => {
+    let d;
     try {
-      const d = JSON.parse(lector.result);
+      d = JSON.parse(lector.result);
       if (d.app !== 'mis-gastos' || !Array.isArray(d.movimientos)) throw new Error('formato');
-      if (!confirm(`Este respaldo tiene ${d.movimientos.length} movimientos. Se reemplazarán los datos actuales de este dispositivo. ¿Continuar?`)) return;
-      guardar('movimientos', d.movimientos);
-      guardar('etiquetas', d.etiquetas || etiquetas);
-      guardar('presupuestos', d.presupuestos || {});
-      guardar('recurrentes', d.recurrentes || []);
-      guardar('metas', d.metas || []);
-      location.reload();
     } catch (err) {
       alert('El archivo no es un respaldo válido de Mis Gastos.');
+      return;
     }
+    const aviso = window.nube?.activo ? ' y de tu nube' : ' de este dispositivo';
+    if (!confirm(`Este respaldo tiene ${d.movimientos.length} movimientos. Se reemplazarán los datos actuales${aviso}. ¿Continuar?`)) return;
+
+    const cfg = {
+      etiquetas: d.etiquetas && d.etiquetas.length ? d.etiquetas : etiquetas,
+      presupuestos: d.presupuestos || {},
+      recurrentes: d.recurrentes || [],
+      metas: d.metas || []
+    };
+    guardar('movimientos', d.movimientos);
+    guardar('etiquetas', cfg.etiquetas);
+    guardar('presupuestos', cfg.presupuestos);
+    guardar('recurrentes', cfg.recurrentes);
+    guardar('metas', cfg.metas);
+
+    if (window.nube?.activo) {
+      try { await window.nube.reemplazarTodo(d.movimientos, cfg); } catch (err) { console.error(err); }
+    }
+    location.reload();
   };
   lector.readAsText(archivo);
   e.target.value = '';
@@ -409,7 +473,7 @@ function pintar() {
   document.getElementById('rotulo').textContent = rotulo(ini, fin);
 
   const delPeriodo = movimientos.filter(m => m.fecha >= desde && m.fecha <= hasta);
-  const ordenados = [...delPeriodo].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
+  const ordenados = [...delPeriodo].sort((a, b) => b.fecha.localeCompare(a.fecha) || String(b.id).localeCompare(String(a.id)));
 
   lista.innerHTML = ordenados.length ? ordenados.map(m => `
     <li>
@@ -419,7 +483,7 @@ function pintar() {
       </div>
       <div>
         <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
-        <button onclick="eliminar(${m.id})" title="Eliminar">×</button>
+        <button onclick="eliminar('${m.id}')" title="Eliminar">×</button>
       </div>
     </li>`).join('') : '<p class="vacio">Sin movimientos en este periodo</p>';
 
