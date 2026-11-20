@@ -141,14 +141,26 @@ document.getElementById('btnNuevaEtiqueta').addEventListener('click', () => {
   }
 });
 
+// Los ingresos no llevan etiqueta: se oculta ese campo cuando se elige "Ingreso"
+function actualizarCampos() {
+  const esIngreso = form.tipo.value === 'ingreso';
+  document.getElementById('filaEtiqueta').style.display = esIngreso ? 'none' : '';
+  const esIngresoRec = document.querySelector('input[name="tiporec"]:checked').value === 'ingreso';
+  selRecEtiqueta.style.display = esIngresoRec ? 'none' : '';
+}
+document.querySelectorAll('input[name="tipo"], input[name="tiporec"]').forEach(r => {
+  r.addEventListener('change', actualizarCampos);
+});
+
 // ---------- Movimientos ----------
 form.addEventListener('submit', e => {
   e.preventDefault();
+  const tipo = form.tipo.value;
   const mov = {
     id: String(Date.now()),
-    tipo: form.tipo.value,
+    tipo,
     monto: parseFloat(document.getElementById('monto').value),
-    etiqueta: selEtiqueta.value,
+    etiqueta: tipo === 'ingreso' ? 'Ingreso' : selEtiqueta.value,
     fecha: document.getElementById('fecha').value,
     nota: document.getElementById('nota').value
   };
@@ -157,6 +169,7 @@ form.addEventListener('submit', e => {
   nubeGuardarMov(mov);
   form.reset();
   document.getElementById('fecha').value = hoy();
+  actualizarCampos();
   pintar();
   avisarPresupuesto(mov);
 });
@@ -275,11 +288,12 @@ function generarRecurrentes() {
 
 document.getElementById('formRec').addEventListener('submit', e => {
   e.preventDefault();
+  const tipo = document.querySelector('input[name="tiporec"]:checked').value;
   recurrentes.push({
     id: Date.now(),
-    tipo: document.querySelector('input[name="tiporec"]:checked').value,
+    tipo,
     monto: parseFloat(document.getElementById('recMonto').value),
-    etiqueta: selRecEtiqueta.value,
+    etiqueta: tipo === 'ingreso' ? 'Ingreso' : selRecEtiqueta.value,
     dia: parseInt(document.getElementById('recDia').value),
     nota: document.getElementById('recNota').value,
     inicio: hoy(),
@@ -287,6 +301,7 @@ document.getElementById('formRec').addEventListener('submit', e => {
   });
   guardarConfig();
   e.target.reset();
+  actualizarCampos();
   generarRecurrentes();
   pintar();
 });
@@ -564,5 +579,6 @@ document.getElementById('calNext').addEventListener('click', () => { calRef.setM
 
 // ---------- Inicio ----------
 pintarEtiquetas();
+actualizarCampos();
 generarRecurrentes();
 pintar();
