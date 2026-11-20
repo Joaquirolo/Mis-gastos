@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mis Gastos</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header><h1>Mis Gastos</h1></header>
+
+  <main>
+    <!-- INICIO -->
+    <section id="inicio" class="vista activa">
+      <div class="periodos">
+        <button data-p="dia">Día</button>
+        <button data-p="semana">Semana</button>
+        <button data-p="mes" class="activo">Mes</button>
+        <button data-p="anio">Año</button>
+      </div>
+      <div class="navperiodo">
+        <button id="prev">‹</button>
+        <strong id="rotulo"></strong>
+        <button id="next">›</button>
+      </div>
+
+      <div class="resumen">
+        <div class="caja"><span>Ingresos</span><strong id="totalIngresos">S/ 0.00</strong></div>
+        <div class="caja"><span>Gastos</span><strong id="totalGastos">S/ 0.00</strong></div>
+        <div class="caja"><span>Saldo</span><strong id="saldo">S/ 0.00</strong></div>
+      </div>
+
+      <div class="tarjeta">
+        <h3>Gastos por etiqueta</h3>
+        <div id="porEtiqueta"></div>
+      </div>
+
+      <form id="formMov" class="tarjeta">
+        <div class="tipo">
+          <label><input type="radio" name="tipo" value="gasto" checked> Gasto</label>
+          <label><input type="radio" name="tipo" value="ingreso"> Ingreso</label>
+        </div>
+        <input type="number" id="monto" step="0.01" min="0" placeholder="Monto (S/)" required>
+        <div class="fila">
+          <select id="etiqueta"></select>
+          <button type="button" id="btnNuevaEtiqueta">+ Etiqueta</button>
+        </div>
+        <input type="date" id="fecha" required>
+        <input type="text" id="nota" placeholder="Nota (opcional)">
+        <button type="submit" class="principal">Guardar</button>
+      </form>
+
+      <h3>Movimientos</h3>
+      <ul id="lista" class="lista"></ul>
+    </section>
+
+    <!-- CALENDARIO -->
+    <section id="calendario" class="vista">
+      <div class="navperiodo">
+        <button id="calPrev">‹</button>
+        <strong id="calRotulo"></strong>
+        <button id="calNext">›</button>
+      </div>
+      <div class="tarjeta">
+        <div class="cal-semana">
+          <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+        </div>
+        <div id="calGrid" class="cal-grid"></div>
+        <div class="leyenda">
+          <small>Menos</small>
+          <i style="background:#dbeafe"></i><i style="background:#93c5fd"></i><i style="background:#3b82f6"></i><i style="background:#1d4ed8"></i>
+          <small>Más</small>
+        </div>
+      </div>
+      <div class="tarjeta">
+        <h3 id="calDetalleTitulo">Toca un día</h3>
+        <ul id="calDetalle" class="lista"></ul>
+      </div>
+    </section>
+
+    <!-- PRESUPUESTOS -->
+    <section id="presupuestos" class="vista">
+      <h3 id="presTitulo">Presupuestos del mes</h3>
+      <form id="formPres" class="tarjeta">
+        <select id="presEtiqueta"></select>
+        <input type="number" id="presMonto" step="0.01" min="1" placeholder="Límite mensual (S/)" required>
+        <button type="submit" class="principal">Guardar presupuesto</button>
+      </form>
+      <div id="presLista"></div>
+    </section>
+
+    <!-- METAS -->
+    <section id="metas" class="vista">
+      <h3>Metas de ahorro</h3>
+      <form id="formMeta" class="tarjeta">
+        <input type="text" id="metaNombre" placeholder="Nombre de la meta (ej. Laptop)" required>
+        <input type="number" id="metaObjetivo" step="0.01" min="1" placeholder="Monto objetivo (S/)" required>
+        <label class="campo">Fecha límite (opcional)
+          <input type="date" id="metaFecha">
+        </label>
+        <button type="submit" class="principal">Crear meta</button>
+      </form>
+      <div id="metasLista"></div>
+    </section>
+
+    <!-- AJUSTES -->
+    <section id="ajustes" class="vista">
+      <h3>Gastos e ingresos recurrentes</h3>
+      <form id="formRec" class="tarjeta">
+        <div class="tipo">
+          <label><input type="radio" name="tiporec" value="gasto" checked> Gasto</label>
+          <label><input type="radio" name="tiporec" value="ingreso"> Ingreso</label>
+        </div>
+        <input type="number" id="recMonto" step="0.01" min="0" placeholder="Monto (S/)" required>
+        <select id="recEtiqueta"></select>
+        <input type="number" id="recDia" min="1" max="31" placeholder="Día del mes (1 a 31)" required>
+        <input type="text" id="recNota" placeholder="Nota (ej. Suscripción)">
+        <button type="submit" class="principal">Guardar recurrente</button>
+      </form>
+      <div id="recLista"></div>
+
+      <h3 class="seccion">Exportar</h3>
+      <div class="tarjeta">
+        <button type="button" class="secundario" id="btnExcel">Exportar a Excel (.xlsx)</button>
+        <button type="button" class="secundario" id="btnCSV">Exportar a CSV</button>
+        <small class="ayuda">Incluye todos tus movimientos. El Excel trae además hojas de presupuestos y metas.</small>
+      </div>
+
+      <h3 class="seccion">Respaldo entre dispositivos</h3>
+      <div class="tarjeta">
+        <button type="button" class="secundario" id="btnRespaldo">Descargar respaldo (.json)</button>
+        <button type="button" class="secundario" id="btnRestaurar">Restaurar desde respaldo</button>
+        <input type="file" id="archivoRespaldo" accept=".json,application/json" hidden>
+        <small class="ayuda">Para pasar tus datos de la PC al celular (o al revés): descarga el respaldo en uno y restáuralo en el otro. Al restaurar se reemplazan los datos actuales.</small>
+      </div>
+    </section>
+  </main>
+
+  <nav>
+    <button data-vista="inicio" class="activo">Inicio</button>
+    <button data-vista="calendario">Calendario</button>
+    <button data-vista="presupuestos">Presupuestos</button>
+    <button data-vista="metas">Metas</button>
+    <button data-vista="ajustes">Ajustes</button>
+  </nav>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
