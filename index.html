@@ -3,63 +3,97 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#09090b">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Mis Gastos</title>
   <script>
-    // Aplica el tema guardado antes de mostrar la página (evita parpadeos)
+    // Tema: oscuro por defecto; si elegiste claro, se recuerda
     try {
-      var t = localStorage.getItem('tema');
-      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
-    } catch (e) {}
+      document.documentElement.dataset.theme = localStorage.getItem('tema') === 'light' ? 'light' : 'dark';
+    } catch (e) {
+      document.documentElement.dataset.theme = 'dark';
+    }
   </script>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <header>
-    <h1>Mis Gastos</h1>
-    <button type="button" id="btnTema" aria-label="Cambiar entre modo claro y oscuro">🌙</button>
+    <div class="marca">
+      <div class="logo" data-icon="wallet"></div>
+      <h1>Mis Gastos</h1>
+    </div>
+    <div class="acciones-cab">
+      <button type="button" id="btnTema" class="btn-redondo" aria-label="Cambiar entre modo claro y oscuro">🌙</button>
+      <button type="button" class="btn-redondo" data-vista="ajustes" aria-label="Ajustes"><span data-icon="gear"></span></button>
+    </div>
   </header>
 
   <main>
     <!-- INICIO -->
     <section id="inicio" class="vista activa">
-      <div class="periodos">
-        <button data-p="dia">Día</button>
-        <button data-p="semana">Semana</button>
-        <button data-p="mes" class="activo">Mes</button>
-        <button data-p="anio">Año</button>
-      </div>
       <div class="navperiodo">
-        <button id="prev">‹</button>
-        <strong id="rotulo"></strong>
-        <button id="next">›</button>
+        <button id="prev" aria-label="Anterior">‹</button>
+        <div class="fecha-pill"><span data-icon="calendar"></span><strong id="rotulo"></strong></div>
+        <button id="next" aria-label="Siguiente">›</button>
       </div>
 
-      <div class="resumen">
-        <div class="caja"><span>Ingresos</span><strong id="totalIngresos">S/ 0.00</strong></div>
-        <div class="caja"><span>Gastos</span><strong id="totalGastos">S/ 0.00</strong></div>
-        <div class="caja"><span>Saldo</span><strong id="saldo">S/ 0.00</strong></div>
+      <div class="periodos">
+        <button data-p="mes" class="activo"><span data-icon="calendar"></span>Mes</button>
+        <button data-p="semana"><span data-icon="bars"></span>Semana</button>
+        <button data-p="dia"><span data-icon="grid"></span>Día</button>
+        <button data-p="anio"><span data-icon="trend"></span>Año</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-icono" data-icon="wallet"></div>
+          <div class="stat-datos">
+            <span>Ingresos</span>
+            <strong id="totalIngresos">S/ 0.00</strong>
+            <em class="tend" id="tendIngresos"></em>
+          </div>
+          <div class="stat-spark" id="sparkIngresos"></div>
+        </div>
+        <div class="stat">
+          <div class="stat-icono" data-icon="card"></div>
+          <div class="stat-datos">
+            <span>Gastos</span>
+            <strong id="totalGastos">S/ 0.00</strong>
+            <em class="tend" id="tendGastos"></em>
+          </div>
+          <div class="stat-spark" id="sparkGastos"></div>
+        </div>
+        <div class="stat">
+          <div class="stat-icono" data-icon="coins"></div>
+          <div class="stat-datos">
+            <span>Saldo</span>
+            <strong id="saldo">S/ 0.00</strong>
+            <em class="tend"></em>
+          </div>
+          <div class="stat-spark" id="sparkSaldo"></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><span class="chip" data-icon="pie"></span><h3>Gastos por etiqueta</h3></div>
+          <div id="porEtiqueta"></div>
+        </div>
+        <div class="tarjeta">
+          <div class="tarjeta-titulo"><span class="chip" data-icon="card"></span><h3>Gastos por método de pago</h3></div>
+          <div id="porMetodo"></div>
+        </div>
       </div>
 
       <div class="tarjeta">
-        <h3>Gastos por etiqueta</h3>
-        <div id="porEtiqueta"></div>
-      </div>
-
-      <div class="tarjeta">
-        <h3>Gastos por método de pago</h3>
-        <div id="porMetodo"></div>
-      </div>
-
-      <div class="tarjeta">
-        <h3>Saldo por método</h3>
-        <div id="saldoMetodos" class="resumen" style="margin-bottom:0"></div>
+        <div class="tarjeta-titulo"><span class="chip" data-icon="bars"></span><h3>Saldo por método</h3></div>
+        <div id="saldoMetodos" class="metodos-saldo"></div>
       </div>
 
       <form id="formMov" class="tarjeta">
+        <div class="tarjeta-titulo"><span class="chip" data-icon="plus"></span><h3>Nuevo movimiento</h3></div>
         <small class="ayuda" id="avisoEdicion" hidden>✎ Estás editando un movimiento</small>
         <div class="tipo">
           <label><input type="radio" name="tipo" value="gasto" checked> Gasto</label>
@@ -79,16 +113,16 @@
         <button type="button" class="secundario" id="btnCancelarEdicion" hidden>Cancelar edición</button>
       </form>
 
-      <h3>Movimientos</h3>
+      <h3 class="titulo-seccion">Movimientos</h3>
       <ul id="lista" class="lista"></ul>
     </section>
 
     <!-- CALENDARIO -->
     <section id="calendario" class="vista">
       <div class="navperiodo">
-        <button id="calPrev">‹</button>
-        <strong id="calRotulo"></strong>
-        <button id="calNext">›</button>
+        <button id="calPrev" aria-label="Anterior">‹</button>
+        <div class="fecha-pill"><span data-icon="calendar"></span><strong id="calRotulo"></strong></div>
+        <button id="calNext" aria-label="Siguiente">›</button>
       </div>
       <div class="tarjeta">
         <div class="cal-semana">
@@ -97,7 +131,7 @@
         <div id="calGrid" class="cal-grid"></div>
         <div class="leyenda">
           <small>Menos</small>
-          <i style="background:#dbeafe"></i><i style="background:#93c5fd"></i><i style="background:#3b82f6"></i><i style="background:#1d4ed8"></i>
+          <i></i><i></i><i></i><i></i>
           <small>Más</small>
         </div>
       </div>
@@ -109,7 +143,7 @@
 
     <!-- PRESUPUESTOS -->
     <section id="presupuestos" class="vista">
-      <h3 id="presTitulo">Presupuestos del mes</h3>
+      <h3 id="presTitulo" class="titulo-seccion">Presupuestos del mes</h3>
       <form id="formPres" class="tarjeta">
         <select id="presEtiqueta"></select>
         <input type="number" id="presMonto" step="0.01" min="1" placeholder="Límite mensual (S/)" required>
@@ -120,7 +154,7 @@
 
     <!-- METAS -->
     <section id="metas" class="vista">
-      <h3>Metas de ahorro</h3>
+      <h3 class="titulo-seccion">Metas de ahorro</h3>
       <form id="formMeta" class="tarjeta">
         <input type="text" id="metaNombre" placeholder="Nombre de la meta (ej. Laptop)" required>
         <input type="number" id="metaObjetivo" step="0.01" min="1" placeholder="Monto objetivo (S/)" required>
@@ -134,7 +168,7 @@
 
     <!-- AJUSTES -->
     <section id="ajustes" class="vista">
-      <h3>Sincronización</h3>
+      <h3 class="titulo-seccion">Sincronización</h3>
       <div class="tarjeta">
         <small class="ayuda" id="nubeEstado">Cargando…</small>
         <button type="button" class="principal" id="btnLogin" hidden>Iniciar sesión con Google</button>
@@ -142,7 +176,7 @@
         <small class="ayuda">Con la sesión iniciada, tus datos se actualizan solos entre tu PC y tu celular. Solo tú puedes verlos.</small>
       </div>
 
-      <h3 class="seccion">Gastos e ingresos recurrentes</h3>
+      <h3 class="titulo-seccion seccion">Gastos e ingresos recurrentes</h3>
       <form id="formRec" class="tarjeta">
         <div class="tipo">
           <label><input type="radio" name="tiporec" value="gasto" checked> Gasto</label>
@@ -159,14 +193,14 @@
       </form>
       <div id="recLista"></div>
 
-      <h3 class="seccion">Exportar</h3>
+      <h3 class="titulo-seccion seccion">Exportar</h3>
       <div class="tarjeta">
         <button type="button" class="secundario" id="btnExcel">Exportar a Excel (.xlsx)</button>
         <button type="button" class="secundario" id="btnCSV">Exportar a CSV</button>
         <small class="ayuda">Incluye todos tus movimientos. El Excel trae además hojas de presupuestos y metas.</small>
       </div>
 
-      <h3 class="seccion">Respaldo</h3>
+      <h3 class="titulo-seccion seccion">Respaldo</h3>
       <div class="tarjeta">
         <button type="button" class="secundario" id="btnRespaldo">Descargar respaldo (.json)</button>
         <button type="button" class="secundario" id="btnRestaurar">Restaurar desde respaldo</button>
@@ -177,11 +211,11 @@
   </main>
 
   <nav>
-    <button data-vista="inicio" class="activo">Inicio</button>
-    <button data-vista="calendario">Calendario</button>
-    <button data-vista="presupuestos">Presupuestos</button>
-    <button data-vista="metas">Metas</button>
-    <button data-vista="ajustes">Ajustes</button>
+    <button data-vista="inicio" class="activo"><span data-icon="home"></span><span>Inicio</span></button>
+    <button data-vista="calendario"><span data-icon="calendar"></span><span>Calendario</span></button>
+    <button type="button" id="btnNuevo" class="fab" aria-label="Nuevo movimiento"><span data-icon="plus"></span></button>
+    <button data-vista="presupuestos"><span data-icon="pie"></span><span>Presupuestos</span></button>
+    <button data-vista="metas"><span data-icon="target"></span><span>Metas</span></button>
   </nav>
 
   <script src="js/xlsx.full.min.js"></script>
@@ -191,15 +225,11 @@
     // Botón de tema claro / oscuro
     (function () {
       var btn = document.getElementById('btnTema');
-      var mq = window.matchMedia('(prefers-color-scheme: dark)');
-      function oscuro() {
-        var t = document.documentElement.dataset.theme;
-        return t ? t === 'dark' : mq.matches;
-      }
+      function oscuro() { return document.documentElement.dataset.theme !== 'light'; }
       function pintarTema() {
         btn.textContent = oscuro() ? '☀️' : '🌙';
         var m = document.querySelector('meta[name="theme-color"]');
-        if (m) m.content = oscuro() ? '#1e3a8a' : '#2563eb';
+        if (m) m.content = oscuro() ? '#09090b' : '#f4f4f6';
       }
       btn.addEventListener('click', function () {
         var nuevo = oscuro() ? 'light' : 'dark';
@@ -207,7 +237,6 @@
         try { localStorage.setItem('tema', nuevo); } catch (e) {}
         pintarTema();
       });
-      mq.addEventListener('change', pintarTema);
       pintarTema();
     })();
 
