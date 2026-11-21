@@ -101,17 +101,35 @@ h3 { margin-bottom: 8px; }
 .ingreso-monto { color: var(--verde); font-weight: 700; }
 .lista button { border: none; background: none; color: var(--apagado); font-size: 18px; cursor: pointer; margin-left: 8px; }
 
-/* Periodos y barras */
+/* Periodos */
 .periodos { display: flex; gap: 6px; margin-bottom: 10px; }
 .periodos button { flex: 1; padding: 10px; border: 1px solid var(--borde); background: var(--tarjeta); border-radius: 8px; font-size: 14px; cursor: pointer; }
 .periodos button.activo { background: var(--primario); color: #fff; border-color: var(--primario); }
 .navperiodo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; text-transform: capitalize; }
 .navperiodo button { border: none; background: var(--tarjeta); width: 40px; height: 40px; border-radius: 50%; font-size: 22px; cursor: pointer; }
-.barra { margin-bottom: 10px; font-size: 14px; }
-.barra .top { display: flex; justify-content: space-between; margin-bottom: 4px; }
-.barra .fondo { background: var(--borde); border-radius: 6px; height: 10px; }
-.barra .relleno { background: var(--primario); height: 100%; border-radius: 6px; }
 .vacio { color: var(--apagado); text-align: center; padding: 10px; }
+
+/* Gráficos de dona (etiquetas y métodos de pago) */
+.grafico { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; }
+.dona { width: 150px; height: 150px; border-radius: 50%; position: relative; flex: none; }
+.dona::after { content: ''; position: absolute; inset: 26px; border-radius: 50%; background: var(--tarjeta); z-index: 0; }
+.dona-centro { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.dona-centro small { color: var(--suave); font-size: 11px; }
+.dona-centro strong { font-size: 15px; }
+.leyenda-lista { flex: 1; min-width: 170px; display: flex; flex-direction: column; gap: 10px; }
+.item-leyenda { display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 8px; font-size: 14px; }
+.punto { width: 12px; height: 12px; border-radius: 4px; }
+.item-leyenda .monto { text-align: right; font-weight: 700; }
+.item-leyenda .monto small { display: block; font-weight: 400; color: var(--suave); font-size: 11px; }
+
+/* Saldo por método */
+.metodos-saldo { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.metodo-card { background: var(--fondo); border-radius: 12px; padding: 12px; border-left: 5px solid var(--color); display: flex; flex-direction: column; gap: 2px; }
+.metodo-card .icono { font-size: 22px; }
+.metodo-card .nombre { font-size: 13px; color: var(--suave); }
+.metodo-card .valor { font-size: 20px; font-weight: 800; }
+.metodo-card .valor.pos { color: var(--verde); }
+.metodo-card .valor.neg { color: var(--rojo); }
 
 /* Calendario */
 .cal-semana, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
