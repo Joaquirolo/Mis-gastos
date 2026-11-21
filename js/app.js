@@ -502,12 +502,19 @@ function pintar() {
       </div>
     </li>`).join('') : '<p class="vacio">Sin movimientos en este periodo</p>';
 
+  // Ingresos y gastos: solo del periodo que estás viendo
   const ing = delPeriodo.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0);
   const gastos = delPeriodo.filter(m => m.tipo === 'gasto');
   const gas = gastos.reduce((s, m) => s + m.monto, 0);
+
+  // Saldo: acumulado de todo lo registrado hasta el final del periodo
+  const saldoAcumulado = movimientos
+    .filter(m => m.fecha <= hasta)
+    .reduce((s, m) => s + (m.tipo === 'ingreso' ? m.monto : -m.monto), 0);
+
   document.getElementById('totalIngresos').textContent = soles(ing);
   document.getElementById('totalGastos').textContent = soles(gas);
-  document.getElementById('saldo').textContent = soles(ing - gas);
+  document.getElementById('saldo').textContent = soles(saldoAcumulado);
 
   // Gastos por etiqueta
   const porEtiq = {};
