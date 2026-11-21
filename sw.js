@@ -7,8 +7,8 @@ const ARCHIVOS = [
   './js/sync.js',
   './js/xlsx.full.min.js',
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-1.png',
+  './icons/icon-2.png'
 ];
 
 self.addEventListener('install', e => {
