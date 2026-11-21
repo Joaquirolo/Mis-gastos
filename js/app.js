@@ -14,6 +14,10 @@ botones.forEach(btn => {
 const guardar = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 const leer = (k, def) => JSON.parse(localStorage.getItem(k)) ?? def;
 
+// Métodos de pago (puedes agregar más, por ejemplo 'Plin')
+const METODOS = ['Efectivo', 'Yape', 'Tarjeta'];
+const metodoDe = m => m.metodo || 'Sin especificar';
+
 let movimientos = leer('movimientos', []);
 let etiquetas = leer('etiquetas', ['Comida', 'Transporte', 'Universidad', 'Ocio', 'Deportes']);
 let presupuestos = leer('presupuestos', {}); // { etiqueta: límite mensual }
@@ -117,12 +121,14 @@ document.getElementById('next').addEventListener('click', () => mover(1));
 // ---------- Elementos ----------
 const form = document.getElementById('formMov');
 const selEtiqueta = document.getElementById('etiqueta');
+const selMetodo = document.getElementById('metodo');
 const selPresEtiqueta = document.getElementById('presEtiqueta');
 const selRecEtiqueta = document.getElementById('recEtiqueta');
+const selRecMetodo = document.getElementById('recMetodo');
 const lista = document.getElementById('lista');
 document.getElementById('fecha').value = hoy();
 
-// ---------- Etiquetas ----------
+// ---------- Etiquetas y métodos ----------
 function pintarEtiquetas() {
   const opciones = etiquetas.map(e => `<option>${e}</option>`).join('');
   [selEtiqueta, selPresEtiqueta, selRecEtiqueta].forEach(s => {
@@ -131,6 +137,12 @@ function pintarEtiquetas() {
     if (etiquetas.includes(previa)) s.value = previa;
   });
 }
+
+function pintarMetodos() {
+  const opciones = METODOS.map(m => `<option>${m}</option>`).join('');
+  [selMetodo, selRecMetodo].forEach(s => { s.innerHTML = opciones; });
+}
+
 document.getElementById('btnNuevaEtiqueta').addEventListener('click', () => {
   const nueva = prompt('Nombre de la nueva etiqueta:');
   if (nueva && !etiquetas.includes(nueva.trim())) {
@@ -161,6 +173,7 @@ form.addEventListener('submit', e => {
     tipo,
     monto: parseFloat(document.getElementById('monto').value),
     etiqueta: tipo === 'ingreso' ? 'Ingreso' : selEtiqueta.value,
+    metodo: selMetodo.value,
     fecha: document.getElementById('fecha').value,
     nota: document.getElementById('nota').value
   };
@@ -265,6 +278,7 @@ function generarRecurrentes() {
           tipo: r.tipo,
           monto: r.monto,
           etiqueta: r.etiqueta,
+          metodo: r.metodo || '',
           fecha,
           nota: (r.nota || 'Recurrente') + ' ↻'
         };
@@ -294,6 +308,7 @@ document.getElementById('formRec').addEventListener('submit', e => {
     tipo,
     monto: parseFloat(document.getElementById('recMonto').value),
     etiqueta: tipo === 'ingreso' ? 'Ingreso' : selRecEtiqueta.value,
+    metodo: selRecMetodo.value,
     dia: parseInt(document.getElementById('recDia').value),
     nota: document.getElementById('recNota').value,
     inicio: hoy(),
@@ -317,7 +332,7 @@ function pintarRecurrentes() {
     <div class="rec">
       <div>
         <strong>${r.etiqueta}</strong>
-        <small>Cada mes, día ${r.dia}${r.nota ? ' · ' + r.nota : ''}</small>
+        <small>Cada mes, día ${r.dia}${r.metodo ? ' · ' + r.metodo : ''}${r.nota ? ' · ' + r.nota : ''}</small>
       </div>
       <div>
         <span class="${r.tipo}-monto">${r.tipo === 'gasto' ? '-' : '+'}${soles(r.monto)}</span>
@@ -399,8 +414,8 @@ const movsOrdenados = () => [...movimientos].sort((a, b) => a.fecha.localeCompar
 document.getElementById('btnCSV').addEventListener('click', () => {
   if (!movimientos.length) return alert('No hay movimientos para exportar.');
   const celda = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const filas = [['Fecha', 'Tipo', 'Etiqueta', 'Monto (S/)', 'Nota']]
-    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : 'Ingreso', m.etiqueta, m.monto.toFixed(2), m.nota]));
+  const filas = [['Fecha', 'Tipo', 'Etiqueta', 'Método de pago', 'Monto (S/)', 'Nota']]
+    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : 'Ingreso', m.etiqueta, m.metodo || '', m.monto.toFixed(2), m.nota]));
   const csv = '\ufeff' + filas.map(f => f.map(celda).join(',')).join('\r\n');
   descargar(`mis-gastos-${hoy()}.csv`, csv, 'text/csv;charset=utf-8');
 });
@@ -409,10 +424,10 @@ document.getElementById('btnExcel').addEventListener('click', () => {
   if (typeof XLSX === 'undefined') return alert('No se pudo cargar la librería de Excel. Recarga la página.');
   if (!movimientos.length) return alert('No hay movimientos para exportar.');
 
-  const hojaMov = [['Fecha', 'Tipo', 'Etiqueta', 'Monto (S/)', 'Nota']]
-    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : 'Ingreso', m.etiqueta, m.monto, m.nota || '']));
+  const hojaMov = [['Fecha', 'Tipo', 'Etiqueta', 'Método de pago', 'Monto (S/)', 'Nota']]
+    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : 'Ingreso', m.etiqueta, m.metodo || '', m.monto, m.nota || '']));
   const wsMov = XLSX.utils.aoa_to_sheet(hojaMov);
-  wsMov['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 30 }];
+  wsMov['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 30 }];
 
   const ym = hoy().slice(0, 7);
   const hojaPres = [['Etiqueta', 'Límite mensual (S/)', 'Gastado este mes (S/)', 'Restante (S/)']]
@@ -482,6 +497,14 @@ document.getElementById('archivoRespaldo').addEventListener('change', e => {
 });
 
 // ---------- Pintar inicio ----------
+function barras(filas, total) {
+  return filas.map(([nombre, monto]) => `
+    <div class="barra">
+      <div class="top"><span>${nombre}</span><span>${soles(monto)} · ${Math.round(monto / total * 100)}%</span></div>
+      <div class="fondo"><div class="relleno" style="width:${monto / total * 100}%"></div></div>
+    </div>`).join('');
+}
+
 function pintar() {
   const [ini, fin] = rango();
   const desde = fechaStr(ini), hasta = fechaStr(fin);
@@ -494,7 +517,7 @@ function pintar() {
     <li>
       <div class="info">
         <strong>${m.etiqueta}</strong>
-        <small>${m.fecha}${m.nota ? ' · ' + m.nota : ''}</small>
+        <small>${m.fecha}${m.metodo ? ' · ' + m.metodo : ''}${m.nota ? ' · ' + m.nota : ''}</small>
       </div>
       <div>
         <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
@@ -508,9 +531,8 @@ function pintar() {
   const gas = gastos.reduce((s, m) => s + m.monto, 0);
 
   // Saldo: acumulado de todo lo registrado hasta el final del periodo
-  const saldoAcumulado = movimientos
-    .filter(m => m.fecha <= hasta)
-    .reduce((s, m) => s + (m.tipo === 'ingreso' ? m.monto : -m.monto), 0);
+  const hastaAhora = movimientos.filter(m => m.fecha <= hasta);
+  const saldoAcumulado = hastaAhora.reduce((s, m) => s + (m.tipo === 'ingreso' ? m.monto : -m.monto), 0);
 
   document.getElementById('totalIngresos').textContent = soles(ing);
   document.getElementById('totalGastos').textContent = soles(gas);
@@ -520,11 +542,29 @@ function pintar() {
   const porEtiq = {};
   gastos.forEach(m => porEtiq[m.etiqueta] = (porEtiq[m.etiqueta] || 0) + m.monto);
   const filas = Object.entries(porEtiq).sort((a, b) => b[1] - a[1]);
-  document.getElementById('porEtiqueta').innerHTML = filas.length ? filas.map(([et, monto]) => `
-    <div class="barra">
-      <div class="top"><span>${et}</span><span>${soles(monto)} · ${Math.round(monto / gas * 100)}%</span></div>
-      <div class="fondo"><div class="relleno" style="width:${monto / gas * 100}%"></div></div>
-    </div>`).join('') : '<p class="vacio">Sin gastos en este periodo</p>';
+  document.getElementById('porEtiqueta').innerHTML = filas.length
+    ? barras(filas, gas)
+    : '<p class="vacio">Sin gastos en este periodo</p>';
+
+  // Gastos por método de pago
+  const porMet = {};
+  gastos.forEach(m => { const k = metodoDe(m); porMet[k] = (porMet[k] || 0) + m.monto; });
+  const filasMet = Object.entries(porMet).sort((a, b) => b[1] - a[1]);
+  document.getElementById('porMetodo').innerHTML = filasMet.length
+    ? barras(filasMet, gas)
+    : '<p class="vacio">Sin gastos en este periodo</p>';
+
+  // Saldo por método (acumulado hasta el final del periodo)
+  const saldoMet = {};
+  METODOS.forEach(k => { saldoMet[k] = 0; });
+  hastaAhora.forEach(m => {
+    const k = metodoDe(m);
+    saldoMet[k] = (saldoMet[k] || 0) + (m.tipo === 'ingreso' ? m.monto : -m.monto);
+  });
+  document.getElementById('saldoMetodos').innerHTML = Object.entries(saldoMet)
+    .filter(([k, v]) => METODOS.includes(k) || Math.abs(v) > 0.004)
+    .map(([k, v]) => `<div class="caja"><span>${k}</span><strong>${soles(v)}</strong></div>`)
+    .join('');
 
   pintarCalendario();
   pintarPresupuestos();
@@ -574,7 +614,7 @@ function pintarDetalleDia() {
   document.getElementById('calDetalleTitulo').textContent = `${diaSel} · Gastado: ${soles(gas)}`;
   document.getElementById('calDetalle').innerHTML = delDia.length ? delDia.map(m => `
     <li>
-      <div class="info"><strong>${m.etiqueta}</strong><small>${m.nota || ''}</small></div>
+      <div class="info"><strong>${m.etiqueta}</strong><small>${[m.metodo, m.nota].filter(Boolean).join(' · ')}</small></div>
       <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
     </li>`).join('') : '<p class="vacio">Sin movimientos este día</p>';
 }
@@ -586,6 +626,7 @@ document.getElementById('calNext').addEventListener('click', () => { calRef.setM
 
 // ---------- Inicio ----------
 pintarEtiquetas();
+pintarMetodos();
 actualizarCampos();
 generarRecurrentes();
 pintar();
