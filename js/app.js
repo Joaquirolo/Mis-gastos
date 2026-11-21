@@ -126,6 +126,9 @@ const selPresEtiqueta = document.getElementById('presEtiqueta');
 const selRecEtiqueta = document.getElementById('recEtiqueta');
 const selRecMetodo = document.getElementById('recMetodo');
 const lista = document.getElementById('lista');
+const btnGuardarMov = document.getElementById('btnGuardarMov');
+const btnCancelarEdicion = document.getElementById('btnCancelarEdicion');
+const avisoEdicion = document.getElementById('avisoEdicion');
 document.getElementById('fecha').value = hoy();
 
 // ---------- Etiquetas y métodos ----------
@@ -138,9 +141,13 @@ function pintarEtiquetas() {
   });
 }
 
-function pintarMetodos() {
-  const opciones = METODOS.map(m => `<option>${m}</option>`).join('');
-  [selMetodo, selRecMetodo].forEach(s => { s.innerHTML = opciones; });
+// extra: se usa al editar un movimiento antiguo ('' = sin método, o un método que ya no está en la lista)
+function pintarMetodos(extra) {
+  let opciones = METODOS.map(m => `<option>${m}</option>`).join('');
+  if (extra === '') opciones = '<option value="">Sin especificar</option>' + opciones;
+  else if (extra && !METODOS.includes(extra)) opciones = `<option>${extra}</option>` + opciones;
+  selMetodo.innerHTML = opciones;
+  selRecMetodo.innerHTML = METODOS.map(m => `<option>${m}</option>`).join('');
 }
 
 document.getElementById('btnNuevaEtiqueta').addEventListener('click', () => {
@@ -165,11 +172,57 @@ document.querySelectorAll('input[name="tipo"], input[name="tiporec"]').forEach(r
 });
 
 // ---------- Movimientos ----------
+let editandoId = null;
+
+function terminarEdicion() {
+  editandoId = null;
+  form.reset();
+  document.getElementById('fecha').value = hoy();
+  pintarEtiquetas();
+  pintarMetodos();
+  actualizarCampos();
+  btnGuardarMov.textContent = 'Guardar';
+  btnCancelarEdicion.hidden = true;
+  avisoEdicion.hidden = true;
+}
+
+// Carga un movimiento en el formulario para modificarlo
+function editarMov(id) {
+  const m = movimientos.find(x => String(x.id) === String(id));
+  if (!m) return;
+
+  // Ir a Inicio, donde está el formulario
+  document.querySelector('nav button[data-vista="inicio"]').click();
+
+  editandoId = String(m.id);
+  pintarEtiquetas();
+  pintarMetodos(m.metodo ? (METODOS.includes(m.metodo) ? undefined : m.metodo) : '');
+
+  form.querySelector(`input[name="tipo"][value="${m.tipo}"]`).checked = true;
+  actualizarCampos();
+  document.getElementById('monto').value = m.monto;
+  if (m.tipo === 'gasto') {
+    if (!etiquetas.includes(m.etiqueta)) {
+      selEtiqueta.insertAdjacentHTML('beforeend', `<option>${m.etiqueta}</option>`);
+    }
+    selEtiqueta.value = m.etiqueta;
+  }
+  selMetodo.value = m.metodo || '';
+  document.getElementById('fecha').value = m.fecha;
+  document.getElementById('nota').value = m.nota || '';
+
+  btnGuardarMov.textContent = 'Guardar cambios';
+  btnCancelarEdicion.hidden = false;
+  avisoEdicion.hidden = false;
+  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+btnCancelarEdicion.addEventListener('click', terminarEdicion);
+
 form.addEventListener('submit', e => {
   e.preventDefault();
   const tipo = form.tipo.value;
-  const mov = {
-    id: String(Date.now()),
+  const datos = {
     tipo,
     monto: parseFloat(document.getElementById('monto').value),
     etiqueta: tipo === 'ingreso' ? 'Ingreso' : selEtiqueta.value,
@@ -177,17 +230,27 @@ form.addEventListener('submit', e => {
     fecha: document.getElementById('fecha').value,
     nota: document.getElementById('nota').value
   };
-  movimientos.push(mov);
+
+  let mov;
+  const i = editandoId ? movimientos.findIndex(x => String(x.id) === editandoId) : -1;
+  if (i >= 0) {
+    // Edición: se conserva el mismo id, así la nube lo actualiza en vez de duplicarlo
+    movimientos[i] = { ...movimientos[i], ...datos };
+    mov = movimientos[i];
+  } else {
+    mov = { id: String(Date.now()), ...datos };
+    movimientos.push(mov);
+  }
+
   guardar('movimientos', movimientos);
   nubeGuardarMov(mov);
-  form.reset();
-  document.getElementById('fecha').value = hoy();
-  actualizarCampos();
+  terminarEdicion();
   pintar();
   avisarPresupuesto(mov);
 });
 
 function eliminar(id) {
+  if (editandoId && String(id) === editandoId) terminarEdicion();
   movimientos = movimientos.filter(m => String(m.id) !== String(id));
   guardar('movimientos', movimientos);
   nubeBorrarMov(id);
@@ -521,6 +584,7 @@ function pintar() {
       </div>
       <div>
         <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
+        <button onclick="editarMov('${m.id}')" title="Editar">✎</button>
         <button onclick="eliminar('${m.id}')" title="Eliminar">×</button>
       </div>
     </li>`).join('') : '<p class="vacio">Sin movimientos en este periodo</p>';
@@ -615,7 +679,10 @@ function pintarDetalleDia() {
   document.getElementById('calDetalle').innerHTML = delDia.length ? delDia.map(m => `
     <li>
       <div class="info"><strong>${m.etiqueta}</strong><small>${[m.metodo, m.nota].filter(Boolean).join(' · ')}</small></div>
-      <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
+      <div>
+        <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
+        <button onclick="editarMov('${m.id}')" title="Editar">✎</button>
+      </div>
     </li>`).join('') : '<p class="vacio">Sin movimientos este día</p>';
 }
 
