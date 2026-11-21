@@ -1,13 +1,30 @@
+// ---------- Íconos ----------
+const mkIcono = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ICONOS = {
+  wallet: mkIcono('<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>'),
+  card: mkIcono('<rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/>'),
+  coins: mkIcono('<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>'),
+  calendar: mkIcono('<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'),
+  bars: mkIcono('<path d="M12 20V10M18 20V4M6 20v-4"/>'),
+  grid: mkIcono('<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>'),
+  trend: mkIcono('<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>'),
+  home: mkIcono('<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'),
+  plus: mkIcono('<path d="M12 5v14M5 12h14"/>'),
+  target: mkIcono('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'),
+  pie: mkIcono('<path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/>'),
+  gear: mkIcono('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>')
+};
+document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = ICONOS[el.dataset.icon] || ''; });
+
 // ---------- Navegación ----------
-const botones = document.querySelectorAll('nav button');
 const vistas = document.querySelectorAll('.vista');
-botones.forEach(btn => {
-  btn.addEventListener('click', () => {
-    botones.forEach(b => b.classList.remove('activo'));
-    vistas.forEach(v => v.classList.remove('activa'));
-    btn.classList.add('activo');
-    document.getElementById(btn.dataset.vista).classList.add('activa');
-  });
+function irA(v) {
+  vistas.forEach(x => x.classList.toggle('activa', x.id === v));
+  document.querySelectorAll('[data-vista]').forEach(b => b.classList.toggle('activo', b.dataset.vista === v));
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('[data-vista]').forEach(b => {
+  b.addEventListener('click', () => irA(b.dataset.vista));
 });
 
 // ---------- Datos ----------
@@ -21,10 +38,13 @@ const unificar = m => (m === 'Yape' || m === 'Tarjeta') ? 'Yape/Tarjeta' : m;
 const metodoDe = m => unificar(m.metodo) || 'Sin especificar';
 
 // Colores e íconos de los gráficos
-const PALETA = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444', '#84cc16'];
-const COLOR_OTROS = '#94a3b8';
-const COLOR_METODO = { 'Efectivo': '#10b981', 'Yape/Tarjeta': '#8b5cf6', 'Sin especificar': '#94a3b8' };
-const ICONO_METODO = { 'Efectivo': '💵', 'Yape/Tarjeta': '📱', 'Sin especificar': '❔' };
+const PALETA = ['#e11d2e', '#ff8a95', '#9f1239', '#f97316', '#6b7280', '#fbbf24', '#be123c', '#a78bfa'];
+const COLOR_OTROS = '#6b7280';
+const COLOR_METODO = { 'Efectivo': '#ff8a95', 'Yape/Tarjeta': '#e11d2e', 'Sin especificar': '#6b7280' };
+const COLOR_BORDE = { 'Efectivo': '#22c55e', 'Yape/Tarjeta': '#e11d2e', 'Sin especificar': '#6b7280' };
+const ICONO_METODO = { 'Efectivo': ICONOS.wallet, 'Yape/Tarjeta': ICONOS.card, 'Sin especificar': ICONOS.coins };
+const LINEA_ROJA = '#ff4d5e';
+const LINEA_VERDE = '#22c55e';
 
 let movimientos = leer('movimientos', []);
 let etiquetas = leer('etiquetas', ['Comida', 'Transporte', 'Universidad', 'Ocio', 'Deportes']);
@@ -32,7 +52,7 @@ let presupuestos = leer('presupuestos', {}); // { etiqueta: límite mensual }
 let recurrentes = leer('recurrentes', []);
 let metas = leer('metas', []);
 
-const soles = n => 'S/ ' + n.toFixed(2);
+const soles = n => 'S/ ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fechaStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const hoy = () => fechaStr(new Date());
 
@@ -103,8 +123,8 @@ window.alIniciarNube = function () {
 let periodo = 'mes';
 let ref = new Date();
 
-function rango() {
-  const d = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate());
+function rango(d0 = ref) {
+  const d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate());
   let ini, fin;
   if (periodo === 'dia') { ini = fin = d; }
   else if (periodo === 'semana') {
@@ -129,12 +149,36 @@ function rotulo(ini, fin) {
   return String(ini.getFullYear());
 }
 
+// Mueve una fecha un periodo hacia adelante (+1) o atrás (-1)
+function desplazar(d, dir) {
+  if (periodo === 'dia') d.setDate(d.getDate() + dir);
+  else if (periodo === 'semana') d.setDate(d.getDate() + 7 * dir);
+  else if (periodo === 'mes') d.setMonth(d.getMonth() + dir, 1);
+  else d.setFullYear(d.getFullYear() + dir);
+}
+
 function mover(dir) {
-  if (periodo === 'dia') ref.setDate(ref.getDate() + dir);
-  else if (periodo === 'semana') ref.setDate(ref.getDate() + 7 * dir);
-  else if (periodo === 'mes') ref.setMonth(ref.getMonth() + dir, 1);
-  else ref.setFullYear(ref.getFullYear() + dir);
+  desplazar(ref, dir);
   pintar();
+}
+
+// Tramos del periodo para los mini gráficos de línea
+function buckets() {
+  const [ini, fin] = rango();
+  const out = [];
+  if (periodo === 'anio') {
+    for (let m = 0; m < 12; m++) {
+      out.push([fechaStr(new Date(ini.getFullYear(), m, 1)), fechaStr(new Date(ini.getFullYear(), m + 1, 0))]);
+    }
+  } else {
+    const dias = periodo === 'mes' ? fin.getDate() : 7;
+    const desde = periodo === 'dia' ? new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() - 6) : ini;
+    for (let i = 0; i < dias; i++) {
+      const f = fechaStr(new Date(desde.getFullYear(), desde.getMonth(), desde.getDate() + i));
+      out.push([f, f]);
+    }
+  }
+  return out;
 }
 
 document.querySelectorAll('.periodos button').forEach(b => {
@@ -160,6 +204,13 @@ const btnGuardarMov = document.getElementById('btnGuardarMov');
 const btnCancelarEdicion = document.getElementById('btnCancelarEdicion');
 const avisoEdicion = document.getElementById('avisoEdicion');
 document.getElementById('fecha').value = hoy();
+
+// Botón + de la barra inferior: ir al formulario de nuevo movimiento
+document.getElementById('btnNuevo').addEventListener('click', () => {
+  irA('inicio');
+  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => document.getElementById('monto').focus(), 400);
+});
 
 // ---------- Etiquetas y métodos ----------
 function pintarEtiquetas() {
@@ -222,7 +273,7 @@ function editarMov(id) {
   if (!m) return;
 
   // Ir a Inicio, donde está el formulario
-  document.querySelector('nav button[data-vista="inicio"]').click();
+  irA('inicio');
 
   editandoId = String(m.id);
   const metodoActual = unificar(m.metodo);
@@ -624,6 +675,43 @@ function dona(filas, total, colorDe) {
     </div>`;
 }
 
+// Mini gráfico de línea con área suave
+let sparkId = 0;
+function spark(vals, color) {
+  if (!vals.length) vals = [0, 0];
+  if (vals.length < 2) vals = [vals[0], vals[0]];
+  const W = 120, H = 40, pad = 5;
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const pts = vals.map((v, i) => [
+    i / (vals.length - 1) * W,
+    max === min ? H / 2 : H - pad - (v - min) / (max - min) * (H - 2 * pad)
+  ]);
+  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    const mx = (x0 + x1) / 2;
+    d += ` C ${mx} ${y0}, ${mx} ${y1}, ${x1} ${y1}`;
+  }
+  const id = 'sp' + (++sparkId);
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${color}" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${d} L ${W} ${H} L 0 ${H} Z" fill="url(#${id})"/>
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke"/>
+  </svg>`;
+}
+
+// Texto de tendencia frente al periodo anterior. subeEsBueno: true para ingresos, false para gastos.
+function tendencia(actual, previo, subeEsBueno) {
+  if (!previo) return ['', ''];
+  const pct = Math.round((actual - previo) / previo * 100);
+  if (pct === 0) return ['→ 0%', 'neutra'];
+  const bueno = (pct > 0) === subeEsBueno;
+  return [`${pct > 0 ? '↑ +' : '↓ '}${pct}%`, bueno ? 'bien' : 'mal'];
+}
+
 // ---------- Pintar inicio ----------
 function pintar() {
   const [ini, fin] = rango();
@@ -659,6 +747,43 @@ function pintar() {
   document.getElementById('totalGastos').textContent = soles(gas);
   document.getElementById('saldo').textContent = soles(saldoAcumulado);
 
+  // Tendencia frente al periodo anterior
+  const refAnt = new Date(ref);
+  desplazar(refAnt, -1);
+  const [aIni, aFin] = rango(refAnt);
+  const anterior = movimientos.filter(m => m.fecha >= fechaStr(aIni) && m.fecha <= fechaStr(aFin));
+  const ingAnt = anterior.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0);
+  const gasAnt = anterior.filter(m => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0);
+  const [tI, cI] = tendencia(ing, ingAnt, true);
+  const [tG, cG] = tendencia(gas, gasAnt, false);
+  const elTI = document.getElementById('tendIngresos');
+  const elTG = document.getElementById('tendGastos');
+  elTI.textContent = tI; elTI.className = 'tend ' + cI; elTI.title = 'Frente al periodo anterior';
+  elTG.textContent = tG; elTG.className = 'tend ' + cG; elTG.title = 'Frente al periodo anterior';
+
+  // Series para los mini gráficos de línea
+  const serie = buckets().map(([a, b]) => {
+    const en = movimientos.filter(m => m.fecha >= a && m.fecha <= b);
+    const sm = {};
+    METODOS.forEach(k => { sm[k] = 0; });
+    let saldo = 0;
+    movimientos.filter(m => m.fecha <= b).forEach(m => {
+      const v = m.tipo === 'ingreso' ? m.monto : -m.monto;
+      saldo += v;
+      const k = metodoDe(m);
+      sm[k] = (sm[k] || 0) + v;
+    });
+    return {
+      ing: en.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0),
+      gas: en.filter(m => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0),
+      saldo,
+      sm
+    };
+  });
+  document.getElementById('sparkIngresos').innerHTML = spark(serie.map(s => s.ing), LINEA_ROJA);
+  document.getElementById('sparkGastos').innerHTML = spark(serie.map(s => s.gas), LINEA_ROJA);
+  document.getElementById('sparkSaldo').innerHTML = spark(serie.map(s => s.saldo), LINEA_ROJA);
+
   // Gastos por etiqueta
   const porEtiq = {};
   gastos.forEach(m => porEtiq[m.etiqueta] = (porEtiq[m.etiqueta] || 0) + m.monto);
@@ -682,16 +807,18 @@ function pintar() {
     const k = metodoDe(m);
     saldoMet[k] = (saldoMet[k] || 0) + (m.tipo === 'ingreso' ? m.monto : -m.monto);
   });
-  const tarjetas = Object.entries(saldoMet)
+  document.getElementById('saldoMetodos').innerHTML = Object.entries(saldoMet)
     .filter(([k, v]) => METODOS.includes(k) || Math.abs(v) > 0.004)
     .map(([k, v]) => `
-      <div class="metodo-card" style="--color:${COLOR_METODO[k] || COLOR_OTROS}">
-        <span class="icono">${ICONO_METODO[k] || '💳'}</span>
-        <span class="nombre">${k}</span>
-        <span class="valor ${v < 0 ? 'neg' : 'pos'}">${soles(v)}</span>
+      <div class="metodo-card" style="--color:${COLOR_BORDE[k] || COLOR_OTROS}">
+        <div class="metodo-icono">${ICONO_METODO[k] || ICONOS.coins}</div>
+        <div class="metodo-datos">
+          <span class="nombre">${k}</span>
+          <span class="valor ${v < 0 ? 'neg' : 'pos'}">${soles(v)}</span>
+        </div>
+        <div class="metodo-spark">${spark(serie.map(s => s.sm[k] || 0), v < 0 ? '#ff6b78' : LINEA_VERDE)}</div>
       </div>`)
     .join('');
-  document.getElementById('saldoMetodos').innerHTML = `<div class="metodos-saldo">${tarjetas}</div>`;
 
   pintarCalendario();
   pintarPresupuestos();
