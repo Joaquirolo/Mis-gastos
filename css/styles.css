@@ -269,18 +269,27 @@ input[type="radio"] { accent-color: var(--primario); }
 .ayuda { color: var(--suave); font-size: 12px; line-height: 1.4; }
 .seccion { margin-top: 24px; }
 
-/* ===== Listas ===== */
+/* ===== Listas (monto, ✎ y × con posición fija) ===== */
 .lista { list-style: none; display: flex; flex-direction: column; gap: 10px; }
 .lista li {
-  display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  padding: 12px 14px; border-radius: 14px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 10px 12px 14px; border-radius: 14px;
   background: linear-gradient(160deg, var(--tarjeta2), var(--tarjeta)); border: 1px solid var(--borde);
 }
 .tarjeta .lista li { background: var(--input); box-shadow: none; }
+/* El texto ocupa lo que sobra y se acomoda en varias líneas */
+.lista .info { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
 .lista .info small { display: block; color: var(--suave); }
+/* Bloque derecho: ancho fijo, nunca se mueve */
+.lista li > div:last-child { flex: none; display: flex; align-items: center; justify-content: flex-end; }
+.lista li > div:last-child > span { width: 104px; text-align: right; font-size: 15px; }
 .gasto-monto { color: var(--rojo); font-weight: 700; white-space: nowrap; }
 .ingreso-monto { color: var(--verde); font-weight: 700; white-space: nowrap; }
-.lista button { border: none; background: none; color: var(--apagado); font-size: 18px; cursor: pointer; margin-left: 6px; }
+.lista button {
+  flex: none; width: 32px; height: 32px; margin: 0; padding: 0;
+  border: none; background: none; color: var(--apagado); font-size: 18px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
 .vacio { color: var(--apagado); text-align: center; padding: 10px; }
 
 /* ===== Calendario ===== */
@@ -331,11 +340,18 @@ input[type="radio"] { accent-color: var(--primario); }
 }
 .meta small { color: var(--suave); }
 
-/* ===== Recurrentes ===== */
+/* ===== Recurrentes (monto y × con posición fija) ===== */
 .rec {
-  display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  padding: 12px 14px; margin-bottom: 10px; border-radius: 14px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 10px 12px 14px; margin-bottom: 10px; border-radius: 14px;
   background: linear-gradient(160deg, var(--tarjeta2), var(--tarjeta)); border: 1px solid var(--borde);
 }
+.rec > div:first-child { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
 .rec small { display: block; color: var(--suave); }
-.rec button { border: none; background: none; color: var(--apagado); font-size: 18px; cursor: pointer; margin-left: 8px; }
+.rec > div:last-child { flex: none; display: flex; align-items: center; justify-content: flex-end; }
+.rec > div:last-child > span { width: 104px; text-align: right; font-size: 15px; }
+.rec button {
+  flex: none; width: 32px; height: 32px; margin: 0; padding: 0;
+  border: none; background: none; color: var(--apagado); font-size: 18px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
