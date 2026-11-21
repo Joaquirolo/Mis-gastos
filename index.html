@@ -60,6 +60,7 @@
       </div>
 
       <form id="formMov" class="tarjeta">
+        <small class="ayuda" id="avisoEdicion" hidden>✎ Estás editando un movimiento</small>
         <div class="tipo">
           <label><input type="radio" name="tipo" value="gasto" checked> Gasto</label>
           <label><input type="radio" name="tipo" value="ingreso"> Ingreso</label>
@@ -74,7 +75,8 @@
         </div>
         <input type="date" id="fecha" required>
         <input type="text" id="nota" placeholder="Nota (opcional)">
-        <button type="submit" class="principal">Guardar</button>
+        <button type="submit" class="principal" id="btnGuardarMov">Guardar</button>
+        <button type="button" class="secundario" id="btnCancelarEdicion" hidden>Cancelar edición</button>
       </form>
 
       <h3>Movimientos</h3>
