@@ -15,8 +15,10 @@ const guardar = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 const leer = (k, def) => JSON.parse(localStorage.getItem(k)) ?? def;
 
 // Métodos de pago (puedes agregar más, por ejemplo 'Plin')
-const METODOS = ['Efectivo', 'Yape', 'Tarjeta'];
-const metodoDe = m => m.metodo || 'Sin especificar';
+const METODOS = ['Efectivo', 'Yape/Tarjeta'];
+// Los métodos antiguos "Yape" y "Tarjeta" se unifican en "Yape/Tarjeta"
+const unificar = m => (m === 'Yape' || m === 'Tarjeta') ? 'Yape/Tarjeta' : m;
+const metodoDe = m => unificar(m.metodo) || 'Sin especificar';
 
 let movimientos = leer('movimientos', []);
 let etiquetas = leer('etiquetas', ['Comida', 'Transporte', 'Universidad', 'Ocio', 'Deportes']);
@@ -40,6 +42,26 @@ function guardarConfig() {
 const nubeGuardarMov = m => window.nube?.guardarMov?.(m);
 const nubeBorrarMov = id => window.nube?.borrarMov?.(id);
 
+// Convierte los métodos "Yape" y "Tarjeta" guardados antes en "Yape/Tarjeta"
+function migrarMetodos() {
+  let cambioMov = false, cambioRec = false;
+  movimientos.forEach(m => {
+    if (m.metodo && unificar(m.metodo) !== m.metodo) {
+      m.metodo = unificar(m.metodo);
+      cambioMov = true;
+      nubeGuardarMov(m);
+    }
+  });
+  recurrentes.forEach(r => {
+    if (r.metodo && unificar(r.metodo) !== r.metodo) {
+      r.metodo = unificar(r.metodo);
+      cambioRec = true;
+    }
+  });
+  if (cambioMov) guardar('movimientos', movimientos);
+  if (cambioRec) guardarConfig();
+}
+
 window.obtenerDatos = () => ({ movimientos, etiquetas, presupuestos, recurrentes, metas });
 
 // sync.js llama a esto cuando llegan datos de la nube
@@ -60,11 +82,13 @@ window.aplicarNube = function (d) {
     guardar('metas', metas);
     pintarEtiquetas();
   }
+  migrarMetodos();
   pintar();
 };
 
 // sync.js llama a esto cuando termina de cargar todo desde la nube
 window.alIniciarNube = function () {
+  migrarMetodos();
   generarRecurrentes();
   pintar();
 };
@@ -195,8 +219,9 @@ function editarMov(id) {
   document.querySelector('nav button[data-vista="inicio"]').click();
 
   editandoId = String(m.id);
+  const metodoActual = unificar(m.metodo);
   pintarEtiquetas();
-  pintarMetodos(m.metodo ? (METODOS.includes(m.metodo) ? undefined : m.metodo) : '');
+  pintarMetodos(metodoActual ? (METODOS.includes(metodoActual) ? undefined : metodoActual) : '');
 
   form.querySelector(`input[name="tipo"][value="${m.tipo}"]`).checked = true;
   actualizarCampos();
@@ -207,7 +232,7 @@ function editarMov(id) {
     }
     selEtiqueta.value = m.etiqueta;
   }
-  selMetodo.value = m.metodo || '';
+  selMetodo.value = metodoActual || '';
   document.getElementById('fecha').value = m.fecha;
   document.getElementById('nota').value = m.nota || '';
 
@@ -341,7 +366,7 @@ function generarRecurrentes() {
           tipo: r.tipo,
           monto: r.monto,
           etiqueta: r.etiqueta,
-          metodo: r.metodo || '',
+          metodo: unificar(r.metodo) || '',
           fecha,
           nota: (r.nota || 'Recurrente') + ' ↻'
         };
@@ -395,7 +420,7 @@ function pintarRecurrentes() {
     <div class="rec">
       <div>
         <strong>${r.etiqueta}</strong>
-        <small>Cada mes, día ${r.dia}${r.metodo ? ' · ' + r.metodo : ''}${r.nota ? ' · ' + r.nota : ''}</small>
+        <small>Cada mes, día ${r.dia}${r.metodo ? ' · ' + unificar(r.metodo) : ''}${r.nota ? ' · ' + r.nota : ''}</small>
       </div>
       <div>
         <span class="${r.tipo}-monto">${r.tipo === 'gasto' ? '-' : '+'}${soles(r.monto)}</span>
@@ -478,7 +503,7 @@ document.getElementById('btnCSV').addEventListener('click', () => {
   if (!movimientos.length) return alert('No hay movimientos para exportar.');
   const celda = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const filas = [['Fecha', 'Tipo', 'Etiqueta', 'Método de pago', 'Monto (S/)', 'Nota']]
-    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : 'Ingreso', m.etiqueta, m.metodo || '', m.monto.toFixed(2), m.nota]));
+    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : 'Ingreso', m.etiqueta, unificar(m.metodo) || '', m.monto.toFixed(2), m.nota]));
   const csv = '\ufeff' + filas.map(f => f.map(celda).join(',')).join('\r\n');
   descargar(`mis-gastos-${hoy()}.csv`, csv, 'text/csv;charset=utf-8');
 });
@@ -488,7 +513,7 @@ document.getElementById('btnExcel').addEventListener('click', () => {
   if (!movimientos.length) return alert('No hay movimientos para exportar.');
 
   const hojaMov = [['Fecha', 'Tipo', 'Etiqueta', 'Método de pago', 'Monto (S/)', 'Nota']]
-    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : 'Ingreso', m.etiqueta, m.metodo || '', m.monto, m.nota || '']));
+    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : 'Ingreso', m.etiqueta, unificar(m.metodo) || '', m.monto, m.nota || '']));
   const wsMov = XLSX.utils.aoa_to_sheet(hojaMov);
   wsMov['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 30 }];
 
@@ -580,7 +605,7 @@ function pintar() {
     <li>
       <div class="info">
         <strong>${m.etiqueta}</strong>
-        <small>${m.fecha}${m.metodo ? ' · ' + m.metodo : ''}${m.nota ? ' · ' + m.nota : ''}</small>
+        <small>${m.fecha}${m.metodo ? ' · ' + unificar(m.metodo) : ''}${m.nota ? ' · ' + m.nota : ''}</small>
       </div>
       <div>
         <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
@@ -678,7 +703,7 @@ function pintarDetalleDia() {
   document.getElementById('calDetalleTitulo').textContent = `${diaSel} · Gastado: ${soles(gas)}`;
   document.getElementById('calDetalle').innerHTML = delDia.length ? delDia.map(m => `
     <li>
-      <div class="info"><strong>${m.etiqueta}</strong><small>${[m.metodo, m.nota].filter(Boolean).join(' · ')}</small></div>
+      <div class="info"><strong>${m.etiqueta}</strong><small>${[unificar(m.metodo), m.nota].filter(Boolean).join(' · ')}</small></div>
       <div>
         <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
         <button onclick="editarMov('${m.id}')" title="Editar">✎</button>
@@ -692,6 +717,7 @@ document.getElementById('calPrev').addEventListener('click', () => { calRef.setM
 document.getElementById('calNext').addEventListener('click', () => { calRef.setMonth(calRef.getMonth() + 1, 1); pintarCalendario(); });
 
 // ---------- Inicio ----------
+migrarMetodos();
 pintarEtiquetas();
 pintarMetodos();
 actualizarCampos();
