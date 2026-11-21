@@ -20,6 +20,12 @@ const METODOS = ['Efectivo', 'Yape/Tarjeta'];
 const unificar = m => (m === 'Yape' || m === 'Tarjeta') ? 'Yape/Tarjeta' : m;
 const metodoDe = m => unificar(m.metodo) || 'Sin especificar';
 
+// Colores e íconos de los gráficos
+const PALETA = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ec4899', '#06b6d4', '#ef4444', '#84cc16'];
+const COLOR_OTROS = '#94a3b8';
+const COLOR_METODO = { 'Efectivo': '#10b981', 'Yape/Tarjeta': '#8b5cf6', 'Sin especificar': '#94a3b8' };
+const ICONO_METODO = { 'Efectivo': '💵', 'Yape/Tarjeta': '📱', 'Sin especificar': '❔' };
+
 let movimientos = leer('movimientos', []);
 let etiquetas = leer('etiquetas', ['Comida', 'Transporte', 'Universidad', 'Ocio', 'Deportes']);
 let presupuestos = leer('presupuestos', {}); // { etiqueta: límite mensual }
@@ -584,15 +590,41 @@ document.getElementById('archivoRespaldo').addEventListener('change', e => {
   e.target.value = '';
 });
 
-// ---------- Pintar inicio ----------
-function barras(filas, total) {
-  return filas.map(([nombre, monto]) => `
-    <div class="barra">
-      <div class="top"><span>${nombre}</span><span>${soles(monto)} · ${Math.round(monto / total * 100)}%</span></div>
-      <div class="fondo"><div class="relleno" style="width:${monto / total * 100}%"></div></div>
-    </div>`).join('');
+// ---------- Gráficos ----------
+// Gráfico de dona con leyenda. filas = [[nombre, monto], ...] ordenadas de mayor a menor.
+// colorDe(nombre) es opcional; si no se da, se usa la paleta general.
+function dona(filas, total, colorDe) {
+  // Si hay demasiadas categorías, las más pequeñas se agrupan en "Otros"
+  if (!colorDe && filas.length > PALETA.length) {
+    const resto = filas.slice(PALETA.length - 1).reduce((s, f) => s + f[1], 0);
+    filas = filas.slice(0, PALETA.length - 1).concat([['Otros', resto]]);
+  }
+  let acum = 0;
+  const trozos = [];
+  const items = [];
+  filas.forEach(([nombre, monto], i) => {
+    const color = colorDe ? colorDe(nombre) : (nombre === 'Otros' ? COLOR_OTROS : PALETA[i % PALETA.length]);
+    const pct = monto / total * 100;
+    const fin = i === filas.length - 1 ? 100 : acum + pct;
+    trozos.push(`${color} ${acum}% ${fin}%`);
+    acum += pct;
+    items.push(`
+      <div class="item-leyenda">
+        <span class="punto" style="background:${color}"></span>
+        <span>${nombre}</span>
+        <span class="monto">${soles(monto)}<small>${Math.round(pct)}%</small></span>
+      </div>`);
+  });
+  return `
+    <div class="grafico">
+      <div class="dona" style="background:conic-gradient(${trozos.join(',')})">
+        <div class="dona-centro"><small>Total</small><strong>${soles(total)}</strong></div>
+      </div>
+      <div class="leyenda-lista">${items.join('')}</div>
+    </div>`;
 }
 
+// ---------- Pintar inicio ----------
 function pintar() {
   const [ini, fin] = rango();
   const desde = fechaStr(ini), hasta = fechaStr(fin);
@@ -632,7 +664,7 @@ function pintar() {
   gastos.forEach(m => porEtiq[m.etiqueta] = (porEtiq[m.etiqueta] || 0) + m.monto);
   const filas = Object.entries(porEtiq).sort((a, b) => b[1] - a[1]);
   document.getElementById('porEtiqueta').innerHTML = filas.length
-    ? barras(filas, gas)
+    ? dona(filas, gas)
     : '<p class="vacio">Sin gastos en este periodo</p>';
 
   // Gastos por método de pago
@@ -640,7 +672,7 @@ function pintar() {
   gastos.forEach(m => { const k = metodoDe(m); porMet[k] = (porMet[k] || 0) + m.monto; });
   const filasMet = Object.entries(porMet).sort((a, b) => b[1] - a[1]);
   document.getElementById('porMetodo').innerHTML = filasMet.length
-    ? barras(filasMet, gas)
+    ? dona(filasMet, gas, n => COLOR_METODO[n] || COLOR_OTROS)
     : '<p class="vacio">Sin gastos en este periodo</p>';
 
   // Saldo por método (acumulado hasta el final del periodo)
@@ -650,10 +682,16 @@ function pintar() {
     const k = metodoDe(m);
     saldoMet[k] = (saldoMet[k] || 0) + (m.tipo === 'ingreso' ? m.monto : -m.monto);
   });
-  document.getElementById('saldoMetodos').innerHTML = Object.entries(saldoMet)
+  const tarjetas = Object.entries(saldoMet)
     .filter(([k, v]) => METODOS.includes(k) || Math.abs(v) > 0.004)
-    .map(([k, v]) => `<div class="caja"><span>${k}</span><strong>${soles(v)}</strong></div>`)
+    .map(([k, v]) => `
+      <div class="metodo-card" style="--color:${COLOR_METODO[k] || COLOR_OTROS}">
+        <span class="icono">${ICONO_METODO[k] || '💳'}</span>
+        <span class="nombre">${k}</span>
+        <span class="valor ${v < 0 ? 'neg' : 'pos'}">${soles(v)}</span>
+      </div>`)
     .join('');
+  document.getElementById('saldoMetodos').innerHTML = `<div class="metodos-saldo">${tarjetas}</div>`;
 
   pintarCalendario();
   pintarPresupuestos();
