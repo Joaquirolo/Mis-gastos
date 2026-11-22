@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#09090b">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon-1.png">
-  <link rel="apple-touch-icon" href="icons/icon-1.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Mis Gastos</title>
   <script>
     // Tema: oscuro por defecto; si elegiste claro, se recuerda
@@ -206,6 +206,13 @@
         <button type="button" class="secundario" id="btnRestaurar">Restaurar desde respaldo</button>
         <input type="file" id="archivoRespaldo" accept=".json,application/json" hidden>
         <small class="ayuda">Guarda una copia de tus datos en un archivo. Al restaurar se reemplazan los datos actuales (y los de la nube, si tienes sesión iniciada).</small>
+      </div>
+
+      <h3 class="titulo-seccion seccion">Respaldo automático en la nube</h3>
+      <div class="tarjeta">
+        <small class="ayuda">Si tienes sesión iniciada, se guarda una copia completa cada semana y se conservan las últimas 8. Si algo sale mal, puedes volver a cualquiera de ellas.</small>
+        <button type="button" class="secundario" id="btnRespaldoNube">Crear respaldo ahora</button>
+        <div id="listaRespaldosNube"></div>
       </div>
     </section>
   </main>
