@@ -17,7 +17,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-// Caché local persistente: funciona sin internet y sube los cambios al reconectar
 const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
 });
@@ -32,12 +31,7 @@ let desuscribir = [];
 const limpiar = o => JSON.parse(JSON.stringify(o));
 const refMovs = () => collection(db, 'usuarios', uid, 'movimientos');
 const refConfig = () => doc(db, 'usuarios', uid, 'app', 'config');
-const refRespaldos = () => collection(db, 'usuarios', uid, 'respaldos');
-const refRespaldoMeta = () => doc(db, 'usuarios', uid, 'app', 'respaldoMeta');
-const MAX_RESPALDOS = 8;
-const SEMANA_MS = 7 * 24 * 60 * 60 * 1000;
 
-// Ejecuta operaciones en lotes de 400 (límite de Firestore: 500)
 function lotes(ops) {
   const promesas = [];
   for (let i = 0; i < ops.length; i += 400) {
@@ -48,76 +42,6 @@ function lotes(ops) {
   return Promise.all(promesas);
 }
 
-// ---------- Respaldos automáticos ----------
-// Crea una copia completa de los datos actuales y conserva solo las últimas MAX_RESPALDOS
-async function crearRespaldo() {
-  if (!uid) return false;
-  try {
-    const datos = window.obtenerDatos();
-    const id = String(Date.now());
-    await setDoc(doc(refRespaldos(), id), {
-      fecha: new Date().toISOString(),
-      movimientos: limpiar(datos.movimientos),
-      config: limpiar({
-        etiquetas: datos.etiquetas,
-        presupuestos: datos.presupuestos,
-        recurrentes: datos.recurrentes,
-        metas: datos.metas
-      })
-    });
-    await setDoc(refRespaldoMeta(), { ultimo: id });
-
-    // Borra los respaldos más viejos si hay más de MAX_RESPALDOS
-    const snap = await getDocs(refRespaldos());
-    const ids = snap.docs.map(d => d.id).sort((a, b) => b.localeCompare(a));
-    const sobrantes = ids.slice(MAX_RESPALDOS);
-    if (sobrantes.length) {
-      await lotes(sobrantes.map(i => b => b.delete(doc(refRespaldos(), i))));
-    }
-    return true;
-  } catch (e) {
-    console.error(e);
-    return false;
-  }
-}
-
-// Revisa si ya pasó una semana desde el último respaldo automático
-async function revisarRespaldoAuto() {
-  if (!uid) return;
-  try {
-    const meta = await getDoc(refRespaldoMeta());
-    const ultimo = meta.exists() ? parseInt(meta.data().ultimo || '0', 10) : 0;
-    if (Date.now() - ultimo > SEMANA_MS) await crearRespaldo();
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-async function listarRespaldos() {
-  if (!uid) return [];
-  try {
-    const snap = await getDocs(refRespaldos());
-    return snap.docs
-      .map(d => ({ id: d.id, fecha: d.data().fecha, cantidad: (d.data().movimientos || []).length }))
-      .sort((a, b) => b.id.localeCompare(a.id));
-  } catch (e) {
-    console.error(e);
-    return [];
-  }
-}
-
-async function restaurarRespaldo(id) {
-  if (!uid) return null;
-  try {
-    const d = await getDoc(doc(refRespaldos(), id));
-    return d.exists() ? d.data() : null;
-  } catch (e) {
-    console.error(e);
-    return null;
-  }
-}
-
-// ---------- Funciones que usa app.js ----------
 window.nube = {
   activo: false,
   guardarMov(m) {
@@ -132,7 +56,6 @@ window.nube = {
     if (!uid) return;
     setDoc(refConfig(), { ...limpiar(c), actualizado: Date.now() }).catch(console.error);
   },
-  // Usado al restaurar un respaldo: deja la nube igual al respaldo
   async reemplazarTodo(movs, cfg) {
     if (!uid) return;
     let enNube = [];
@@ -142,21 +65,16 @@ window.nube = {
     enNube.forEach(d => { if (!ids.has(d.id)) ops.push(b => b.delete(d.ref)); });
     movs.forEach(m => ops.push(b => b.set(doc(refMovs(), String(m.id)), limpiar(m))));
     ops.push(b => b.set(refConfig(), { ...limpiar(cfg), actualizado: Date.now() }));
-    // Espera hasta 4 segundos; si no hay internet, los cambios quedan en cola
     await Promise.race([lotes(ops), new Promise(r => setTimeout(r, 4000))]);
-  },
-  crearRespaldo,
-  listarRespaldos,
-  restaurarRespaldo
+  }
 };
 
-// ---------- Primera combinación de datos ----------
 function fusionarConfig(local, nube) {
   if (!nube) return local;
   const porId = (a = [], b = []) => {
     const m = new Map();
     a.forEach(x => m.set(x.id, x));
-    b.forEach(x => m.set(x.id, x)); // la nube manda si hay conflicto
+    b.forEach(x => m.set(x.id, x));
     return [...m.values()];
   };
   return {
@@ -186,7 +104,7 @@ async function primeraFusion() {
     );
     ops.push(b => b.set(refConfig(), { ...limpiar(cfg), actualizado: Date.now() }));
 
-    lotes(ops).catch(console.error); // los cambios quedan en cola aunque se corte internet
+    lotes(ops).catch(console.error);
     localStorage.setItem(clave, '1');
     return true;
   } catch (e) {
@@ -195,7 +113,6 @@ async function primeraFusion() {
   }
 }
 
-// ---------- Escuchar cambios de la nube ----------
 function marcar(meta) {
   const base = 'Conectado: ' + (auth.currentUser?.email || '');
   estado.textContent = meta.hasPendingWrites ? base + ' · subiendo cambios…'
@@ -210,7 +127,6 @@ function escuchar() {
   };
 
   desuscribir.push(onSnapshot(refMovs(), snap => {
-    // Una caché vacía recién creada no debe borrar tus datos locales
     if (!(snap.empty && snap.metadata.fromCache)) {
       window.aplicarNube({ movimientos: snap.docs.map(d => d.data()) });
     }
@@ -226,7 +142,6 @@ function escuchar() {
   }, err => console.error(err)));
 }
 
-// ---------- Sesión ----------
 async function iniciar(user) {
   desuscribir.forEach(f => f());
   desuscribir = [];
@@ -236,12 +151,8 @@ async function iniciar(user) {
   btnLogout.hidden = false;
   estado.textContent = 'Sincronizando…';
   const ok = await primeraFusion();
-  if (ok) {
-    escuchar();
-    revisarRespaldoAuto();
-  } else {
-    estado.textContent = 'Sin conexión. Se sincronizará al reconectar.';
-  }
+  if (ok) escuchar();
+  else estado.textContent = 'Sin conexión. Se sincronizará al reconectar.';
 }
 
 onAuthStateChanged(auth, user => {
