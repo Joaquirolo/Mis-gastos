@@ -555,6 +555,8 @@ function configurarAhorroMensual() {
   alert(`Listo: cada mes se descontarán ${soles(monto)} como ahorro, el día ${dia}.`);
 }
 
+// Crea los aportes automáticos de los meses que aún no se han generado.
+// No exige que ya haya pasado el día configurado: si activas a mitad de mes, igual cuenta el de este mes.
 function generarAhorroMensual() {
   if (!ahorroMensual.monto || !ahorroMensual.creada) return;
   const hoyStr = hoy();
@@ -566,7 +568,7 @@ function generarAhorroMensual() {
     const dd = Math.min(ahorroMensual.dia || 1, new Date(y, mes + 1, 0).getDate());
     const fecha = fechaStr(new Date(y, mes, dd));
     const ym = fecha.slice(0, 7);
-    if (fecha >= ahorroMensual.creada && fecha <= hoyStr && ym > (ahorroMensual.ultimo || '')) {
+    if (fecha <= hoyStr && ym > (ahorroMensual.ultimo || '')) {
       const mov = {
         id: `ahorro_${ym}`,
         tipo: 'ahorro',
@@ -593,6 +595,31 @@ function generarAhorroMensual() {
   }
 }
 
+// Ahorro extra, fuera del automático, para cuando quieras guardar algo de más
+function agregarAhorroExtra() {
+  const txt = prompt('¿Cuánto quieres ahorrar hoy, aparte del automático?');
+  const monto = parseFloat(txt);
+  if (!txt || isNaN(monto) || monto <= 0) return;
+
+  const metodoTxt = prompt('¿Con qué método? Escribe "Efectivo" o "Yape/Tarjeta"', ahorroMensual.metodo || METODOS[0]);
+  if (metodoTxt === null) return;
+  const metodo = METODOS.includes(unificar(metodoTxt.trim())) ? unificar(metodoTxt.trim()) : METODOS[0];
+
+  const mov = {
+    id: String(Date.now()),
+    tipo: 'ahorro',
+    monto,
+    etiqueta: 'Ahorro adicional',
+    metodo,
+    fecha: hoy(),
+    nota: 'Ahorro adicional'
+  };
+  movimientos.push(mov);
+  guardar('movimientos', movimientos);
+  nubeGuardarMov(mov);
+  pintar();
+}
+
 function pintarAhorroMensual() {
   const total = movimientos.filter(m => m.tipo === 'ahorro').reduce((s, m) => s + m.monto, 0);
   const cont = document.getElementById('ahorroMensualInfo');
@@ -606,6 +633,7 @@ function pintarAhorroMensual() {
 }
 
 document.getElementById('btnAhorroMensual').addEventListener('click', configurarAhorroMensual);
+document.getElementById('btnAhorroExtra').addEventListener('click', agregarAhorroExtra);
 
 function descargar(nombre, contenido, tipo) {
   const blob = new Blob([contenido], { type: tipo });
