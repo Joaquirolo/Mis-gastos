@@ -830,6 +830,13 @@ function pintar() {
   document.getElementById('totalGastos').textContent = soles(gas);
   document.getElementById('saldo').textContent = soles(saldoAcumulado);
 
+  const ahorroPeriodo = delPeriodo.filter(m => m.tipo === 'ahorro').reduce((s, m) => s + m.monto, 0);
+  const ahorroTotalAcum = hastaAhora.filter(m => m.tipo === 'ahorro').reduce((s, m) => s + m.monto, 0);
+  const elResumenAhorros = document.getElementById('resumenAhorros');
+  if (elResumenAhorros) {
+    elResumenAhorros.innerHTML = `<span>Ahorrado este periodo: <strong class="ahorro-monto">${soles(ahorroPeriodo)}</strong></span><span>Ahorrado en total: <strong class="ahorro-monto">${soles(ahorroTotalAcum)}</strong></span>`;
+  }
+
   const refAnt = new Date(ref);
   desplazar(refAnt, -1);
   const [aIni, aFin] = rango(refAnt);
