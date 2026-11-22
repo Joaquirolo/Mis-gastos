@@ -24,7 +24,10 @@ function irA(v) {
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('[data-vista]').forEach(b => {
-  b.addEventListener('click', () => irA(b.dataset.vista));
+  b.addEventListener('click', () => {
+    irA(b.dataset.vista);
+    if (b.dataset.vista === 'ajustes') pintarRespaldosNube();
+  });
 });
 
 // ---------- Datos ----------
@@ -117,6 +120,7 @@ window.alIniciarNube = function () {
   migrarMetodos();
   generarRecurrentes();
   pintar();
+  pintarRespaldosNube();
 };
 
 // ---------- Periodo ----------
@@ -542,7 +546,7 @@ function pintarMetas() {
   }).join('') : '<p class="vacio">Aún no tienes metas. Crea la primera arriba.</p>';
 }
 
-// ---------- Exportar y respaldo ----------
+// ---------- Exportar y respaldo manual ----------
 function descargar(nombre, contenido, tipo) {
   const blob = new Blob([contenido], { type: tipo });
   const a = document.createElement('a');
@@ -641,250 +645,4 @@ document.getElementById('archivoRespaldo').addEventListener('change', e => {
   e.target.value = '';
 });
 
-// ---------- Gráficos ----------
-// Gráfico de dona con leyenda. filas = [[nombre, monto], ...] ordenadas de mayor a menor.
-// colorDe(nombre) es opcional; si no se da, se usa la paleta general.
-function dona(filas, total, colorDe) {
-  // Si hay demasiadas categorías, las más pequeñas se agrupan en "Otros"
-  if (!colorDe && filas.length > PALETA.length) {
-    const resto = filas.slice(PALETA.length - 1).reduce((s, f) => s + f[1], 0);
-    filas = filas.slice(0, PALETA.length - 1).concat([['Otros', resto]]);
-  }
-  let acum = 0;
-  const trozos = [];
-  const items = [];
-  filas.forEach(([nombre, monto], i) => {
-    const color = colorDe ? colorDe(nombre) : (nombre === 'Otros' ? COLOR_OTROS : PALETA[i % PALETA.length]);
-    const pct = monto / total * 100;
-    const fin = i === filas.length - 1 ? 100 : acum + pct;
-    trozos.push(`${color} ${acum}% ${fin}%`);
-    acum += pct;
-    items.push(`
-      <div class="item-leyenda">
-        <span class="punto" style="background:${color}"></span>
-        <span>${nombre}</span>
-        <span class="monto">${soles(monto)}<small>${Math.round(pct)}%</small></span>
-      </div>`);
-  });
-  return `
-    <div class="grafico">
-      <div class="dona" style="background:conic-gradient(${trozos.join(',')})">
-        <div class="dona-centro"><small>Total</small><strong>${soles(total)}</strong></div>
-      </div>
-      <div class="leyenda-lista">${items.join('')}</div>
-    </div>`;
-}
-
-// Mini gráfico de línea con área suave
-let sparkId = 0;
-function spark(vals, color) {
-  if (!vals.length) vals = [0, 0];
-  if (vals.length < 2) vals = [vals[0], vals[0]];
-  const W = 120, H = 40, pad = 5;
-  const min = Math.min(...vals), max = Math.max(...vals);
-  const pts = vals.map((v, i) => [
-    i / (vals.length - 1) * W,
-    max === min ? H / 2 : H - pad - (v - min) / (max - min) * (H - 2 * pad)
-  ]);
-  let d = `M ${pts[0][0]} ${pts[0][1]}`;
-  for (let i = 1; i < pts.length; i++) {
-    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
-    const mx = (x0 + x1) / 2;
-    d += ` C ${mx} ${y0}, ${mx} ${y1}, ${x1} ${y1}`;
-  }
-  const id = 'sp' + (++sparkId);
-  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-    <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${color}" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="${color}" stop-opacity="0"/>
-    </linearGradient></defs>
-    <path d="${d} L ${W} ${H} L 0 ${H} Z" fill="url(#${id})"/>
-    <path d="${d}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke"/>
-  </svg>`;
-}
-
-// Texto de tendencia frente al periodo anterior. subeEsBueno: true para ingresos, false para gastos.
-function tendencia(actual, previo, subeEsBueno) {
-  if (!previo) return ['', ''];
-  const pct = Math.round((actual - previo) / previo * 100);
-  if (pct === 0) return ['→ 0%', 'neutra'];
-  const bueno = (pct > 0) === subeEsBueno;
-  return [`${pct > 0 ? '↑ +' : '↓ '}${pct}%`, bueno ? 'bien' : 'mal'];
-}
-
-// ---------- Pintar inicio ----------
-function pintar() {
-  const [ini, fin] = rango();
-  const desde = fechaStr(ini), hasta = fechaStr(fin);
-  document.getElementById('rotulo').textContent = rotulo(ini, fin);
-
-  const delPeriodo = movimientos.filter(m => m.fecha >= desde && m.fecha <= hasta);
-  const ordenados = [...delPeriodo].sort((a, b) => b.fecha.localeCompare(a.fecha) || String(b.id).localeCompare(String(a.id)));
-
-  lista.innerHTML = ordenados.length ? ordenados.map(m => `
-    <li>
-      <div class="info">
-        <strong>${m.etiqueta}</strong>
-        <small>${m.fecha}${m.metodo ? ' · ' + unificar(m.metodo) : ''}${m.nota ? ' · ' + m.nota : ''}</small>
-      </div>
-      <div>
-        <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
-        <button onclick="editarMov('${m.id}')" title="Editar">✎</button>
-        <button onclick="eliminar('${m.id}')" title="Eliminar">×</button>
-      </div>
-    </li>`).join('') : '<p class="vacio">Sin movimientos en este periodo</p>';
-
-  // Ingresos y gastos: solo del periodo que estás viendo
-  const ing = delPeriodo.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0);
-  const gastos = delPeriodo.filter(m => m.tipo === 'gasto');
-  const gas = gastos.reduce((s, m) => s + m.monto, 0);
-
-  // Saldo: acumulado de todo lo registrado hasta el final del periodo
-  const hastaAhora = movimientos.filter(m => m.fecha <= hasta);
-  const saldoAcumulado = hastaAhora.reduce((s, m) => s + (m.tipo === 'ingreso' ? m.monto : -m.monto), 0);
-
-  document.getElementById('totalIngresos').textContent = soles(ing);
-  document.getElementById('totalGastos').textContent = soles(gas);
-  document.getElementById('saldo').textContent = soles(saldoAcumulado);
-
-  // Tendencia frente al periodo anterior
-  const refAnt = new Date(ref);
-  desplazar(refAnt, -1);
-  const [aIni, aFin] = rango(refAnt);
-  const anterior = movimientos.filter(m => m.fecha >= fechaStr(aIni) && m.fecha <= fechaStr(aFin));
-  const ingAnt = anterior.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0);
-  const gasAnt = anterior.filter(m => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0);
-  const [tI, cI] = tendencia(ing, ingAnt, true);
-  const [tG, cG] = tendencia(gas, gasAnt, false);
-  const elTI = document.getElementById('tendIngresos');
-  const elTG = document.getElementById('tendGastos');
-  elTI.textContent = tI; elTI.className = 'tend ' + cI; elTI.title = 'Frente al periodo anterior';
-  elTG.textContent = tG; elTG.className = 'tend ' + cG; elTG.title = 'Frente al periodo anterior';
-
-  // Series para los mini gráficos de línea
-  const serie = buckets().map(([a, b]) => {
-    const en = movimientos.filter(m => m.fecha >= a && m.fecha <= b);
-    const sm = {};
-    METODOS.forEach(k => { sm[k] = 0; });
-    let saldo = 0;
-    movimientos.filter(m => m.fecha <= b).forEach(m => {
-      const v = m.tipo === 'ingreso' ? m.monto : -m.monto;
-      saldo += v;
-      const k = metodoDe(m);
-      sm[k] = (sm[k] || 0) + v;
-    });
-    return {
-      ing: en.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0),
-      gas: en.filter(m => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0),
-      saldo,
-      sm
-    };
-  });
-  document.getElementById('sparkIngresos').innerHTML = spark(serie.map(s => s.ing), LINEA_ROJA);
-  document.getElementById('sparkGastos').innerHTML = spark(serie.map(s => s.gas), LINEA_ROJA);
-  document.getElementById('sparkSaldo').innerHTML = spark(serie.map(s => s.saldo), LINEA_ROJA);
-
-  // Gastos por etiqueta
-  const porEtiq = {};
-  gastos.forEach(m => porEtiq[m.etiqueta] = (porEtiq[m.etiqueta] || 0) + m.monto);
-  const filas = Object.entries(porEtiq).sort((a, b) => b[1] - a[1]);
-  document.getElementById('porEtiqueta').innerHTML = filas.length
-    ? dona(filas, gas)
-    : '<p class="vacio">Sin gastos en este periodo</p>';
-
-  // Gastos por método de pago
-  const porMet = {};
-  gastos.forEach(m => { const k = metodoDe(m); porMet[k] = (porMet[k] || 0) + m.monto; });
-  const filasMet = Object.entries(porMet).sort((a, b) => b[1] - a[1]);
-  document.getElementById('porMetodo').innerHTML = filasMet.length
-    ? dona(filasMet, gas, n => COLOR_METODO[n] || COLOR_OTROS)
-    : '<p class="vacio">Sin gastos en este periodo</p>';
-
-  // Saldo por método (acumulado hasta el final del periodo)
-  const saldoMet = {};
-  METODOS.forEach(k => { saldoMet[k] = 0; });
-  hastaAhora.forEach(m => {
-    const k = metodoDe(m);
-    saldoMet[k] = (saldoMet[k] || 0) + (m.tipo === 'ingreso' ? m.monto : -m.monto);
-  });
-  document.getElementById('saldoMetodos').innerHTML = Object.entries(saldoMet)
-    .filter(([k, v]) => METODOS.includes(k) || Math.abs(v) > 0.004)
-    .map(([k, v]) => `
-      <div class="metodo-card" style="--color:${COLOR_BORDE[k] || COLOR_OTROS}">
-        <div class="metodo-icono">${ICONO_METODO[k] || ICONOS.coins}</div>
-        <div class="metodo-datos">
-          <span class="nombre">${k}</span>
-          <span class="valor ${v < 0 ? 'neg' : 'pos'}">${soles(v)}</span>
-        </div>
-        <div class="metodo-spark">${spark(serie.map(s => s.sm[k] || 0), v < 0 ? '#ff6b78' : LINEA_VERDE)}</div>
-      </div>`)
-    .join('');
-
-  pintarCalendario();
-  pintarPresupuestos();
-  pintarRecurrentes();
-  pintarMetas();
-}
-
-// ---------- Calendario ----------
-let calRef = new Date();
-let diaSel = hoy();
-
-function pintarCalendario() {
-  const anio = calRef.getFullYear(), mes = calRef.getMonth();
-  document.getElementById('calRotulo').textContent =
-    new Date(anio, mes, 1).toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
-
-  const totales = {};
-  movimientos.filter(m => m.tipo === 'gasto').forEach(m => {
-    totales[m.fecha] = (totales[m.fecha] || 0) + m.monto;
-  });
-
-  const diasMes = new Date(anio, mes + 1, 0).getDate();
-  const vals = [];
-  for (let d = 1; d <= diasMes; d++) {
-    const t = totales[fechaStr(new Date(anio, mes, d))];
-    if (t) vals.push(t);
-  }
-  const max = Math.max(...vals, 0);
-
-  const offset = (new Date(anio, mes, 1).getDay() + 6) % 7; // lunes primero
-  let html = '<div class="cal-dia vacio-dia"></div>'.repeat(offset);
-  for (let d = 1; d <= diasMes; d++) {
-    const f = fechaStr(new Date(anio, mes, d));
-    const t = totales[f] || 0;
-    let nivel = 0;
-    if (t > 0) nivel = Math.min(4, Math.ceil(t / max * 4));
-    const cls = ['cal-dia', nivel ? 'nivel' + nivel : '', f === hoy() ? 'hoy' : '', f === diaSel ? 'sel' : ''].join(' ');
-    html += `<button class="${cls}" onclick="selDia('${f}')">${d}${t ? `<small>${Math.round(t)}</small>` : ''}</button>`;
-  }
-  document.getElementById('calGrid').innerHTML = html;
-  pintarDetalleDia();
-}
-
-function pintarDetalleDia() {
-  const delDia = movimientos.filter(m => m.fecha === diaSel);
-  const gas = delDia.filter(m => m.tipo === 'gasto').reduce((s, m) => s + m.monto, 0);
-  document.getElementById('calDetalleTitulo').textContent = `${diaSel} · Gastado: ${soles(gas)}`;
-  document.getElementById('calDetalle').innerHTML = delDia.length ? delDia.map(m => `
-    <li>
-      <div class="info"><strong>${m.etiqueta}</strong><small>${[unificar(m.metodo), m.nota].filter(Boolean).join(' · ')}</small></div>
-      <div>
-        <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
-        <button onclick="editarMov('${m.id}')" title="Editar">✎</button>
-      </div>
-    </li>`).join('') : '<p class="vacio">Sin movimientos este día</p>';
-}
-
-function selDia(f) { diaSel = f; pintarCalendario(); }
-
-document.getElementById('calPrev').addEventListener('click', () => { calRef.setMonth(calRef.getMonth() - 1, 1); pintarCalendario(); });
-document.getElementById('calNext').addEventListener('click', () => { calRef.setMonth(calRef.getMonth() + 1, 1); pintarCalendario(); });
-
-// ---------- Inicio ----------
-migrarMetodos();
-pintarEtiquetas();
-pintarMetodos();
-actualizarCampos();
-generarRecurrentes();
-pintar();
+//
