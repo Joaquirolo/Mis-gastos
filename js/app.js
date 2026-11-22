@@ -1,4 +1,3 @@
-// ---------- Íconos ----------
 const mkIcono = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const ICONOS = {
   wallet: mkIcono('<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>'),
@@ -16,7 +15,6 @@ const ICONOS = {
 };
 document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = ICONOS[el.dataset.icon] || ''; });
 
-// ---------- Navegación ----------
 const vistas = document.querySelectorAll('.vista');
 function irA(v) {
   vistas.forEach(x => x.classList.toggle('activa', x.id === v));
@@ -27,17 +25,13 @@ document.querySelectorAll('[data-vista]').forEach(b => {
   b.addEventListener('click', () => irA(b.dataset.vista));
 });
 
-// ---------- Datos ----------
 const guardar = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 const leer = (k, def) => JSON.parse(localStorage.getItem(k)) ?? def;
 
-// Métodos de pago (puedes agregar más, por ejemplo 'Plin')
 const METODOS = ['Efectivo', 'Yape/Tarjeta'];
-// Los métodos antiguos "Yape" y "Tarjeta" se unifican en "Yape/Tarjeta"
 const unificar = m => (m === 'Yape' || m === 'Tarjeta') ? 'Yape/Tarjeta' : m;
 const metodoDe = m => unificar(m.metodo) || 'Sin especificar';
 
-// Colores e íconos de los gráficos
 const PALETA = ['#e11d2e', '#ff8a95', '#9f1239', '#f97316', '#6b7280', '#fbbf24', '#be123c', '#a78bfa'];
 const COLOR_OTROS = '#6b7280';
 const COLOR_METODO = { 'Efectivo': '#ff8a95', 'Yape/Tarjeta': '#e11d2e', 'Sin especificar': '#6b7280' };
@@ -48,21 +42,22 @@ const LINEA_VERDE = '#22c55e';
 
 let movimientos = leer('movimientos', []);
 let etiquetas = leer('etiquetas', ['Comida', 'Transporte', 'Universidad', 'Ocio', 'Deportes']);
-let presupuestos = leer('presupuestos', {}); // { etiqueta: límite mensual }
+let presupuestos = leer('presupuestos', {});
 let recurrentes = leer('recurrentes', []);
 let metas = leer('metas', []);
+let ahorroMensual = leer('ahorroMensual', { monto: 0, metodo: '', dia: 1, ultimo: '', creada: '' });
 
 const soles = n => 'S/ ' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fechaStr = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const hoy = () => fechaStr(new Date());
 
-// ---------- Conexión con la nube (sync.js) ----------
 function guardarConfig() {
   guardar('etiquetas', etiquetas);
   guardar('presupuestos', presupuestos);
   guardar('recurrentes', recurrentes);
   guardar('metas', metas);
-  window.nube?.guardarConfig?.({ etiquetas, presupuestos, recurrentes, metas });
+  guardar('ahorroMensual', ahorroMensual);
+  window.nube?.guardarConfig?.({ etiquetas, presupuestos, recurrentes, metas, ahorroMensual });
 }
 const nubeGuardarMov = m => window.nube?.guardarMov?.(m);
 const nubeBorrarMov = id => window.nube?.borrarMov?.(id);
@@ -99,10 +94,12 @@ window.aplicarNube = function (d) {
     presupuestos = c.presupuestos || {};
     recurrentes = c.recurrentes || [];
     metas = c.metas || [];
+    ahorroMensual = c.ahorroMensual || { monto: 0, metodo: '', dia: 1, ultimo: '', creada: '' };
     guardar('etiquetas', etiquetas);
     guardar('presupuestos', presupuestos);
     guardar('recurrentes', recurrentes);
     guardar('metas', metas);
+    guardar('ahorroMensual', ahorroMensual);
     pintarEtiquetas();
   }
   migrarMetodos();
@@ -112,10 +109,10 @@ window.aplicarNube = function (d) {
 window.alIniciarNube = function () {
   migrarMetodos();
   generarRecurrentes();
+  generarAhorroMensual();
   pintar();
 };
 
-// ---------- Periodo ----------
 let periodo = 'mes';
 let ref = new Date();
 
@@ -186,7 +183,6 @@ document.querySelectorAll('.periodos button').forEach(b => {
 document.getElementById('prev').addEventListener('click', () => mover(-1));
 document.getElementById('next').addEventListener('click', () => mover(1));
 
-// ---------- Elementos ----------
 const form = document.getElementById('formMov');
 const selEtiqueta = document.getElementById('etiqueta');
 const selMetodo = document.getElementById('metodo');
@@ -205,7 +201,6 @@ document.getElementById('btnNuevo').addEventListener('click', () => {
   setTimeout(() => document.getElementById('monto').focus(), 400);
 });
 
-// ---------- Etiquetas y métodos ----------
 function pintarEtiquetas() {
   const opciones = etiquetas.map(e => `<option>${e}</option>`).join('');
   [selEtiqueta, selPresEtiqueta, selRecEtiqueta].forEach(s => {
@@ -243,7 +238,6 @@ document.querySelectorAll('input[name="tipo"], input[name="tiporec"]').forEach(r
   r.addEventListener('change', actualizarCampos);
 });
 
-// ---------- Movimientos ----------
 let editandoId = null;
 
 function terminarEdicion() {
@@ -269,10 +263,10 @@ function editarMov(id) {
   pintarEtiquetas();
   pintarMetodos(metodoActual ? (METODOS.includes(metodoActual) ? undefined : metodoActual) : '');
 
-  form.querySelector(`input[name="tipo"][value="${m.tipo}"]`).checked = true;
+  form.querySelector(`input[name="tipo"][value="${m.tipo === 'ahorro' ? 'gasto' : m.tipo}"]`).checked = true;
   actualizarCampos();
   document.getElementById('monto').value = m.monto;
-  if (m.tipo === 'gasto') {
+  if (m.tipo !== 'ingreso') {
     if (!etiquetas.includes(m.etiqueta)) {
       selEtiqueta.insertAdjacentHTML('beforeend', `<option>${m.etiqueta}</option>`);
     }
@@ -327,7 +321,6 @@ function eliminar(id) {
   pintar();
 }
 
-// ---------- Presupuestos ----------
 function gastadoMes(etiqueta, ym) {
   return movimientos
     .filter(m => m.tipo === 'gasto' && m.etiqueta === etiqueta && m.fecha.startsWith(ym))
@@ -391,7 +384,6 @@ function pintarPresupuestos() {
   }).join('') : '<p class="vacio">Aún no tienes presupuestos. Crea el primero arriba.</p>';
 }
 
-// ---------- Recurrentes ----------
 function generarRecurrentes() {
   const hoyStr = hoy();
   const ahora = new Date();
@@ -472,7 +464,6 @@ function pintarRecurrentes() {
     </div>`).join('') : '<p class="vacio">Aún no tienes recurrentes.</p>';
 }
 
-// ---------- Metas de ahorro ----------
 document.getElementById('formMeta').addEventListener('submit', e => {
   e.preventDefault();
   metas.push({
@@ -528,7 +519,94 @@ function pintarMetas() {
   }).join('') : '<p class="vacio">Aún no tienes metas. Crea la primera arriba.</p>';
 }
 
-// ---------- Exportar y respaldo ----------
+// ---------- Ahorro mensual (general, no ligado a una meta) ----------
+function configurarAhorroMensual() {
+  const txt = prompt('¿Cuánto quieres ahorrar cada mes? (en soles, pon 0 para desactivar)', ahorroMensual.monto || '');
+  if (txt === null) return;
+  const monto = parseFloat(txt) || 0;
+
+  if (monto <= 0) {
+    ahorroMensual.monto = 0;
+    ahorroMensual.metodo = '';
+    guardarConfig();
+    pintarAhorroMensual();
+    return;
+  }
+
+  const metodoTxt = prompt('¿Con qué método se descuenta? Escribe "Efectivo" o "Yape/Tarjeta"', ahorroMensual.metodo || METODOS[0]);
+  if (metodoTxt === null) return;
+  const metodo = METODOS.includes(unificar(metodoTxt.trim())) ? unificar(metodoTxt.trim()) : METODOS[0];
+
+  const diaTxt = prompt('¿Qué día del mes?', ahorroMensual.dia || 1);
+  if (diaTxt === null) return;
+  const dia = Math.min(31, Math.max(1, parseInt(diaTxt) || 1));
+
+  if (!ahorroMensual.monto || ahorroMensual.monto <= 0) {
+    ahorroMensual.creada = hoy();
+    ahorroMensual.ultimo = '';
+  }
+  ahorroMensual.monto = monto;
+  ahorroMensual.metodo = metodo;
+  ahorroMensual.dia = dia;
+
+  guardarConfig();
+  generarAhorroMensual();
+  pintar();
+  alert(`Listo: cada mes se descontarán ${soles(monto)} como ahorro, el día ${dia}.`);
+}
+
+function generarAhorroMensual() {
+  if (!ahorroMensual.monto || !ahorroMensual.creada) return;
+  const hoyStr = hoy();
+  const ahora = new Date();
+  let hubo = false;
+
+  let y = parseInt(ahorroMensual.creada.slice(0, 4)), mes = parseInt(ahorroMensual.creada.slice(5, 7)) - 1;
+  while (y < ahora.getFullYear() || (y === ahora.getFullYear() && mes <= ahora.getMonth())) {
+    const dd = Math.min(ahorroMensual.dia || 1, new Date(y, mes + 1, 0).getDate());
+    const fecha = fechaStr(new Date(y, mes, dd));
+    const ym = fecha.slice(0, 7);
+    if (fecha >= ahorroMensual.creada && fecha <= hoyStr && ym > (ahorroMensual.ultimo || '')) {
+      const mov = {
+        id: `ahorro_${ym}`,
+        tipo: 'ahorro',
+        monto: ahorroMensual.monto,
+        etiqueta: 'Ahorro mensual',
+        metodo: unificar(ahorroMensual.metodo) || '',
+        fecha,
+        nota: 'Ahorro mensual automático'
+      };
+      if (!movimientos.some(x => String(x.id) === mov.id)) {
+        movimientos.push(mov);
+        nubeGuardarMov(mov);
+      }
+      ahorroMensual.ultimo = ym;
+      hubo = true;
+    }
+    mes++;
+    if (mes > 11) { mes = 0; y++; }
+  }
+
+  if (hubo) {
+    guardar('movimientos', movimientos);
+    guardarConfig();
+  }
+}
+
+function pintarAhorroMensual() {
+  const total = movimientos.filter(m => m.tipo === 'ahorro').reduce((s, m) => s + m.monto, 0);
+  const cont = document.getElementById('ahorroMensualInfo');
+  const btn = document.getElementById('btnAhorroMensual');
+  if (!cont || !btn) return;
+
+  cont.innerHTML = ahorroMensual.monto
+    ? `<span>Se descuentan ${soles(ahorroMensual.monto)} el día ${ahorroMensual.dia} (${unificar(ahorroMensual.metodo) || 'Sin especificar'})</span><strong>Ahorrado en total: ${soles(total)}</strong>`
+    : `<span>Aún no has activado un ahorro mensual.</span><strong>Ahorrado en total: ${soles(total)}</strong>`;
+  btn.textContent = ahorroMensual.monto ? 'Editar ahorro mensual' : 'Activar ahorro mensual';
+}
+
+document.getElementById('btnAhorroMensual').addEventListener('click', configurarAhorroMensual);
+
 function descargar(nombre, contenido, tipo) {
   const blob = new Blob([contenido], { type: tipo });
   const a = document.createElement('a');
@@ -546,7 +624,7 @@ document.getElementById('btnCSV').addEventListener('click', () => {
   if (!movimientos.length) return alert('No hay movimientos para exportar.');
   const celda = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const filas = [['Fecha', 'Tipo', 'Etiqueta', 'Método de pago', 'Monto (S/)', 'Nota']]
-    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : 'Ingreso', m.etiqueta, unificar(m.metodo) || '', m.monto.toFixed(2), m.nota]));
+    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : m.tipo === 'ahorro' ? 'Ahorro' : 'Ingreso', m.etiqueta, unificar(m.metodo) || '', m.monto.toFixed(2), m.nota]));
   const csv = '\ufeff' + filas.map(f => f.map(celda).join(',')).join('\r\n');
   descargar(`mis-gastos-${hoy()}.csv`, csv, 'text/csv;charset=utf-8');
 });
@@ -556,7 +634,7 @@ document.getElementById('btnExcel').addEventListener('click', () => {
   if (!movimientos.length) return alert('No hay movimientos para exportar.');
 
   const hojaMov = [['Fecha', 'Tipo', 'Etiqueta', 'Método de pago', 'Monto (S/)', 'Nota']]
-    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : 'Ingreso', m.etiqueta, unificar(m.metodo) || '', m.monto, m.nota || '']));
+    .concat(movsOrdenados().map(m => [m.fecha, m.tipo === 'gasto' ? 'Gasto' : m.tipo === 'ahorro' ? 'Ahorro' : 'Ingreso', m.etiqueta, unificar(m.metodo) || '', m.monto, m.nota || '']));
   const wsMov = XLSX.utils.aoa_to_sheet(hojaMov);
   wsMov['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 30 }];
 
@@ -627,7 +705,6 @@ document.getElementById('archivoRespaldo').addEventListener('change', e => {
   e.target.value = '';
 });
 
-// ---------- Gráficos ----------
 function dona(filas, total, colorDe) {
   if (!colorDe && filas.length > PALETA.length) {
     const resto = filas.slice(PALETA.length - 1).reduce((s, f) => s + f[1], 0);
@@ -693,7 +770,6 @@ function tendencia(actual, previo, subeEsBueno) {
   return [`${pct > 0 ? '↑ +' : '↓ '}${pct}%`, bueno ? 'bien' : 'mal'];
 }
 
-// ---------- Pintar inicio ----------
 function pintar() {
   const [ini, fin] = rango();
   const desde = fechaStr(ini), hasta = fechaStr(fin);
@@ -709,7 +785,7 @@ function pintar() {
         <small>${m.fecha}${m.metodo ? ' · ' + unificar(m.metodo) : ''}${m.nota ? ' · ' + m.nota : ''}</small>
       </div>
       <div>
-        <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
+        <span class="${m.tipo}-monto">${m.tipo === 'ingreso' ? '+' : '-'}${soles(m.monto)}</span>
         <button onclick="editarMov('${m.id}')" title="Editar">✎</button>
         <button onclick="eliminar('${m.id}')" title="Eliminar">×</button>
       </div>
@@ -798,9 +874,9 @@ function pintar() {
   pintarPresupuestos();
   pintarRecurrentes();
   pintarMetas();
+  pintarAhorroMensual();
 }
 
-// ---------- Calendario ----------
 let calRef = new Date();
 let diaSel = hoy();
 
@@ -844,7 +920,7 @@ function pintarDetalleDia() {
     <li>
       <div class="info"><strong>${m.etiqueta}</strong><small>${[unificar(m.metodo), m.nota].filter(Boolean).join(' · ')}</small></div>
       <div>
-        <span class="${m.tipo}-monto">${m.tipo === 'gasto' ? '-' : '+'}${soles(m.monto)}</span>
+        <span class="${m.tipo}-monto">${m.tipo === 'ingreso' ? '+' : '-'}${soles(m.monto)}</span>
         <button onclick="editarMov('${m.id}')" title="Editar">✎</button>
       </div>
     </li>`).join('') : '<p class="vacio">Sin movimientos este día</p>';
@@ -855,10 +931,10 @@ function selDia(f) { diaSel = f; pintarCalendario(); }
 document.getElementById('calPrev').addEventListener('click', () => { calRef.setMonth(calRef.getMonth() - 1, 1); pintarCalendario(); });
 document.getElementById('calNext').addEventListener('click', () => { calRef.setMonth(calRef.getMonth() + 1, 1); pintarCalendario(); });
 
-// ---------- Inicio ----------
 migrarMetodos();
 pintarEtiquetas();
 pintarMetodos();
 actualizarCampos();
 generarRecurrentes();
+generarAhorroMensual();
 pintar();
