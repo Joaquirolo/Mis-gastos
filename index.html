@@ -9,7 +9,6 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Mis Gastos</title>
   <script>
-    // Tema: oscuro por defecto; si elegiste claro, se recuerda
     try {
       document.documentElement.dataset.theme = localStorage.getItem('tema') === 'light' ? 'light' : 'dark';
     } catch (e) {
@@ -31,7 +30,6 @@
   </header>
 
   <main>
-    <!-- INICIO -->
     <section id="inicio" class="vista activa">
       <div class="navperiodo">
         <button id="prev" aria-label="Anterior">‹</button>
@@ -117,7 +115,6 @@
       <ul id="lista" class="lista"></ul>
     </section>
 
-    <!-- CALENDARIO -->
     <section id="calendario" class="vista">
       <div class="navperiodo">
         <button id="calPrev" aria-label="Anterior">‹</button>
@@ -141,7 +138,6 @@
       </div>
     </section>
 
-    <!-- PRESUPUESTOS -->
     <section id="presupuestos" class="vista">
       <h3 id="presTitulo" class="titulo-seccion">Presupuestos del mes</h3>
       <form id="formPres" class="tarjeta">
@@ -152,7 +148,6 @@
       <div id="presLista"></div>
     </section>
 
-    <!-- METAS -->
     <section id="metas" class="vista">
       <h3 class="titulo-seccion">Metas de ahorro</h3>
       <form id="formMeta" class="tarjeta">
@@ -164,9 +159,15 @@
         <button type="submit" class="principal">Crear meta</button>
       </form>
       <div id="metasLista"></div>
+
+      <h3 class="titulo-seccion seccion">Ahorro mensual</h3>
+      <div class="tarjeta">
+        <div id="ahorroMensualInfo" style="display:flex; flex-direction:column; gap:6px;"></div>
+        <button type="button" class="secundario" id="btnAhorroMensual">Activar ahorro mensual</button>
+        <small class="ayuda">Cada mes se descuenta este monto de tu saldo automáticamente y aparece como "Ahorro", no como gasto.</small>
+      </div>
     </section>
 
-    <!-- AJUSTES -->
     <section id="ajustes" class="vista">
       <h3 class="titulo-seccion">Sincronización</h3>
       <div class="tarjeta">
@@ -222,7 +223,6 @@
   <script src="js/app.js"></script>
   <script type="module" src="js/sync.js"></script>
   <script>
-    // Botón de tema claro / oscuro
     (function () {
       var btn = document.getElementById('btnTema');
       function oscuro() { return document.documentElement.dataset.theme !== 'light'; }
