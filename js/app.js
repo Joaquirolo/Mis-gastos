@@ -830,13 +830,40 @@ function pintar() {
   document.getElementById('totalGastos').textContent = soles(gas);
   document.getElementById('saldo').textContent = soles(saldoAcumulado);
 
-  const ahorroPeriodo = delPeriodo.filter(m => m.tipo === 'ahorro').reduce((s, m) => s + m.monto, 0);
+    const ahorroPeriodo = delPeriodo.filter(m => m.tipo === 'ahorro').reduce((s, m) => s + m.monto, 0);
   const ahorroTotalAcum = hastaAhora.filter(m => m.tipo === 'ahorro').reduce((s, m) => s + m.monto, 0);
   const elResumenAhorros = document.getElementById('resumenAhorros');
   if (elResumenAhorros) {
-    elResumenAhorros.innerHTML = `<span>Ahorrado este periodo: <strong class="ahorro-monto">${soles(ahorroPeriodo)}</strong></span><span>Ahorrado en total: <strong class="ahorro-monto">${soles(ahorroTotalAcum)}</strong></span>`;
+    const hoyAncla = new Date();
+    const sparkAhorro = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoyAncla.getFullYear(), hoyAncla.getMonth() - i, 1);
+      const ymi = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      sparkAhorro.push(movimientos.filter(m => m.tipo === 'ahorro' && m.fecha.startsWith(ymi)).reduce((s, m) => s + m.monto, 0));
+    }
+    const AMBAR = '#f97316';
+    elResumenAhorros.innerHTML = `
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1; background:rgba(249,115,22,.1); border:1px solid rgba(249,115,22,.3); border-radius:14px; padding:12px; display:flex; align-items:center; gap:10px;">
+          <div style="width:34px; height:34px; color:${AMBAR}; flex-shrink:0;">${ICONOS.coins}</div>
+          <div style="display:flex; flex-direction:column;">
+            <small style="opacity:.7;">Este periodo</small>
+            <strong style="color:${AMBAR}; font-size:1.05em;">${soles(ahorroPeriodo)}</strong>
+          </div>
+        </div>
+        <div style="flex:1; background:rgba(249,115,22,.1); border:1px solid rgba(249,115,22,.3); border-radius:14px; padding:12px; display:flex; align-items:center; gap:10px;">
+          <div style="width:34px; height:34px; color:${AMBAR}; flex-shrink:0;">${ICONOS.coins}</div>
+          <div style="display:flex; flex-direction:column;">
+            <small style="opacity:.7;">Total ahorrado</small>
+            <strong style="color:${AMBAR}; font-size:1.05em;">${soles(ahorroTotalAcum)}</strong>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <small style="opacity:.7;">Evolución (últimos 6 meses)</small>
+        <div style="height:40px; margin-top:4px;">${spark(sparkAhorro, AMBAR)}</div>
+      </div>`;
   }
-
   const refAnt = new Date(ref);
   desplazar(refAnt, -1);
   const [aIni, aFin] = rango(refAnt);
