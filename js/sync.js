@@ -31,6 +31,8 @@ let desuscribir = [];
 const limpiar = o => JSON.parse(JSON.stringify(o));
 const refMovs = () => collection(db, 'usuarios', uid, 'movimientos');
 const refConfig = () => doc(db, 'usuarios', uid, 'app', 'config');
+const refRespaldos = () => collection(db, 'usuarios', uid, 'respaldos');
+const refRespaldoMeta = () => doc(db, 'usuarios', uid, 'app', 'respaldo');
 
 function lotes(ops) {
   const promesas = [];
@@ -66,6 +68,41 @@ window.nube = {
     movs.forEach(m => ops.push(b => b.set(doc(refMovs(), String(m.id)), limpiar(m))));
     ops.push(b => b.set(refConfig(), { ...limpiar(cfg), actualizado: Date.now() }));
     await Promise.race([lotes(ops), new Promise(r => setTimeout(r, 4000))]);
+  },
+  async necesitaRespaldoSemanal() {
+    if (!uid) return false;
+    try {
+      const snap = await getDoc(refRespaldoMeta());
+      const ultimo = snap.exists() ? snap.data().ultimo : null;
+      if (!ultimo) return true;
+      const dias = (Date.now() - new Date(ultimo).getTime()) / 86400000;
+      return dias >= 7;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  },
+  async guardarRespaldoSemanal(datos) {
+    if (!uid) return;
+    try {
+      const fecha = new Date().toISOString().slice(0, 10);
+      await setDoc(doc(refRespaldos(), fecha), { ...limpiar(datos), fecha, creado: Date.now() });
+      await setDoc(refRespaldoMeta(), { ultimo: fecha });
+    } catch (e) {
+      console.error(e);
+    }
+  },
+  async obtenerUltimoRespaldo() {
+    if (!uid) return null;
+    try {
+      const snap = await getDoc(refRespaldoMeta());
+      if (!snap.exists() || !snap.data().ultimo) return null;
+      const docSnap = await getDoc(doc(refRespaldos(), snap.data().ultimo));
+      return docSnap.exists() ? docSnap.data() : null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
   }
 };
 
