@@ -861,7 +861,7 @@ function pintar() {
       </div>
       <div style="margin-top:12px;">
         <small style="opacity:.7;">Evolución (últimos 6 meses)</small>
-        <div style="height:40px; margin-top:4px;">${spark(sparkAhorro, AMBAR)}</div>
+               <div class="stat-spark" style="height:40px; margin-top:4px;">${spark(sparkAhorro, AMBAR)}</div>
       </div>`;
   }
   const refAnt = new Date(ref);
