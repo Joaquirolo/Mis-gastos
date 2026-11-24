@@ -195,6 +195,69 @@ const btnCancelarEdicion = document.getElementById('btnCancelarEdicion');
 const avisoEdicion = document.getElementById('avisoEdicion');
 document.getElementById('fecha').value = hoy();
 
+// ---------- Calculadora para el campo Monto ----------
+let calcExpresion = '0';
+
+function pintarCalculadora() {
+  document.getElementById('calcPantalla').textContent = calcExpresion;
+}
+
+function abrirCalculadora() {
+  const actual = document.getElementById('monto').value;
+  calcExpresion = actual && parseFloat(actual) > 0 ? actual : '0';
+  pintarCalculadora();
+  document.getElementById('modalCalculadora').classList.add('abierto');
+}
+
+function cerrarCalculadora() {
+  document.getElementById('modalCalculadora').classList.remove('abierto');
+}
+
+document.getElementById('btnCalculadora').addEventListener('click', abrirCalculadora);
+document.getElementById('btnCerrarCalculadora').addEventListener('click', cerrarCalculadora);
+document.getElementById('modalCalculadora').addEventListener('click', e => {
+  if (e.target.id === 'modalCalculadora') cerrarCalculadora();
+});
+
+document.querySelectorAll('.calc-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    const tecla = b.dataset.calc;
+    if (tecla === 'limpiar') {
+      calcExpresion = '0';
+    } else if (tecla === 'borrar') {
+      calcExpresion = calcExpresion.length > 1 ? calcExpresion.slice(0, -1) : '0';
+    } else if (tecla === '=') {
+      if (!/^[0-9+\-*/.%\s]+$/.test(calcExpresion)) {
+        calcExpresion = 'Error';
+      } else {
+        try {
+          const resultado = Function(`"use strict"; return (${calcExpresion})`)();
+          calcExpresion = isFinite(resultado) ? String(Math.round(resultado * 100) / 100) : 'Error';
+        } catch (err) {
+          calcExpresion = 'Error';
+        }
+      }
+    } else {
+      if (calcExpresion === '0' && !'+-*/.'.includes(tecla)) {
+        calcExpresion = tecla;
+      } else if (calcExpresion === 'Error') {
+        calcExpresion = '+-*/.'.includes(tecla) ? '0' + tecla : tecla;
+      } else {
+        calcExpresion += tecla;
+      }
+    }
+    pintarCalculadora();
+  });
+});
+
+document.getElementById('btnUsarCalculadora').addEventListener('click', () => {
+  if (calcExpresion === 'Error' || !/^-?\d+(\.\d+)?$/.test(calcExpresion)) {
+    alert('Termina la operación con "=" antes de usar el monto.');
+    return;
+  }
+  document.getElementById('monto').value = Math.abs(parseFloat(calcExpresion));
+  cerrarCalculadora();
+});
 document.getElementById('btnNuevo').addEventListener('click', () => {
   irA('inicio');
   form.scrollIntoView({ behavior: 'smooth', block: 'center' });
