@@ -939,7 +939,26 @@ function pintar() {
   pintarAhorroMensual();
   pintarTendenciaCategorias();
 }
-
+function miniSpark(vals, color) {
+  if (!vals.length) vals = [0, 0];
+  if (vals.length < 2) vals = [vals[0], vals[0]];
+  const W = 120, H = 40, pad = 5;
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const pts = vals.map((v, i) => [
+    i / (vals.length - 1) * W,
+    max === min ? H / 2 : H - pad - (v - min) / (max - min) * (H - 2 * pad)
+  ]);
+  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    const mx = (x0 + x1) / 2;
+    d += ` C ${mx} ${y0}, ${mx} ${y1}, ${x1} ${y1}`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%; height:100%; display:block;">
+    <path d="${d} L ${W} ${H} L 0 ${H} Z" fill="${color}" fill-opacity="0.15"/>
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="2" vector-effect="non-scaling-stroke"/>
+  </svg>`;
+}
 function pintarTendenciaCategorias() {
   const cont = document.getElementById('tendenciaCategorias');
   if (!cont) return;
