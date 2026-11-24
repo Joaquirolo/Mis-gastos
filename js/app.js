@@ -111,7 +111,20 @@ window.alIniciarNube = function () {
   generarRecurrentes();
   generarAhorroMensual();
   pintar();
+  revisarRespaldoSemanal();
 };
+
+async function revisarRespaldoSemanal() {
+  if (!window.nube?.activo) return;
+  try {
+    const necesita = await window.nube.necesitaRespaldoSemanal();
+    if (necesita) {
+      await window.nube.guardarRespaldoSemanal({ movimientos, etiquetas, presupuestos, recurrentes, metas, ahorroMensual });
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
 
 let periodo = 'mes';
 let ref = new Date();
@@ -757,6 +770,24 @@ document.getElementById('btnRespaldo').addEventListener('click', () => {
 
 document.getElementById('btnRestaurar').addEventListener('click', () => {
   document.getElementById('archivoRespaldo').click();
+});
+
+document.getElementById('btnRespaldoNube').addEventListener('click', async () => {
+  if (!window.nube?.activo) return alert('Necesitas tener sesión iniciada para usar los respaldos de la nube.');
+  const r = await window.nube.obtenerUltimoRespaldo();
+  if (!r) return alert('Aún no hay ningún respaldo automático guardado (se crea una vez por semana).');
+  if (!confirm(`Hay un respaldo automático del ${r.fecha} con ${(r.movimientos || []).length} movimientos. Esto reemplazará tus datos actuales (local y nube). ¿Continuar?`)) return;
+
+  movimientos = r.movimientos || [];
+  etiquetas = r.etiquetas && r.etiquetas.length ? r.etiquetas : etiquetas;
+  presupuestos = r.presupuestos || {};
+  recurrentes = r.recurrentes || [];
+  metas = r.metas || [];
+  ahorroMensual = r.ahorroMensual || { monto: 0, metodo: '', dia: 1, ultimo: '', creada: '' };
+  guardar('movimientos', movimientos);
+  guardarConfig();
+  try { await window.nube.reemplazarTodo(movimientos, { etiquetas, presupuestos, recurrentes, metas, ahorroMensual }); } catch (e) { console.error(e); }
+  location.reload();
 });
 
 document.getElementById('archivoRespaldo').addEventListener('change', e => {
