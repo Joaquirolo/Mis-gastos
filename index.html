@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#09090b">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/icon-1.png">
+  <link rel="apple-touch-icon" href="icons/icon-2.png">
   <title>Mis Gastos</title>
   <script>
     try {
@@ -88,6 +88,11 @@
           <div class="tarjeta-titulo"><span class="chip" data-icon="card"></span><h3>Gastos por método de pago</h3></div>
           <div id="porMetodo"></div>
         </div>
+      </div>
+
+      <div class="tarjeta">
+        <div class="tarjeta-titulo"><span class="chip" data-icon="trend"></span><h3>Tendencia por categoría (6 meses)</h3></div>
+        <div id="tendenciaCategorias"></div>
       </div>
 
       <div class="tarjeta">
@@ -234,21 +239,4 @@
       function oscuro() { return document.documentElement.dataset.theme !== 'light'; }
       function pintarTema() {
         btn.textContent = oscuro() ? '☀️' : '🌙';
-        var m = document.querySelector('meta[name="theme-color"]');
-        if (m) m.content = oscuro() ? '#09090b' : '#f4f4f6';
-      }
-      btn.addEventListener('click', function () {
-        var nuevo = oscuro() ? 'light' : 'dark';
-        document.documentElement.dataset.theme = nuevo;
-        try { localStorage.setItem('tema', nuevo); } catch (e) {}
-        pintarTema();
-      });
-      pintarTema();
-    })();
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    }
-  </script>
-</body>
-</html>
+        var m =
