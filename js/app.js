@@ -910,6 +910,59 @@ function pintar() {
   pintarRecurrentes();
   pintarMetas();
   pintarAhorroMensual();
+  pintarTendenciaCategorias();
+}
+
+function pintarTendenciaCategorias() {
+  const cont = document.getElementById('tendenciaCategorias');
+  if (!cont) return;
+
+  const ahora = new Date();
+  const meses = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+    meses.push({
+      ym: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      etiqueta: d.toLocaleDateString('es-PE', { month: 'short' })
+    });
+  }
+
+  const porEtiquetaMes = {};
+  movimientos.filter(m => m.tipo === 'gasto').forEach(m => {
+    const ym = m.fecha.slice(0, 7);
+    if (!meses.some(x => x.ym === ym)) return;
+    porEtiquetaMes[m.etiqueta] = porEtiquetaMes[m.etiqueta] || {};
+    porEtiquetaMes[m.etiqueta][ym] = (porEtiquetaMes[m.etiqueta][ym] || 0) + m.monto;
+  });
+
+  const filas = Object.entries(porEtiquetaMes).map(([et, porMes]) => {
+    const valores = meses.map(m => porMes[m.ym] || 0);
+    const total = valores.reduce((s, v) => s + v, 0);
+    return { et, valores, total };
+  }).filter(f => f.total > 0).sort((a, b) => b.total - a.total).slice(0, 6);
+
+  if (!filas.length) {
+    cont.innerHTML = '<p class="vacio">Aún no hay suficiente historial para comparar (necesitas movimientos en varios meses).</p>';
+    return;
+  }
+
+  cont.innerHTML = filas.map(f => {
+    const subir = f.valores[3] > 0 && f.valores[4] > f.valores[3] && f.valores[5] > f.valores[4];
+    const max = Math.max(...f.valores, 1);
+    const barras = f.valores.map((v, i) => `
+      <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;">
+        <div style="width:100%; max-width:20px; height:${Math.max(4, Math.round(v / max * 48))}px; background:${subir ? '#ff6b78' : '#e11d2e'}; border-radius:4px 4px 0 0;" title="${soles(v)}"></div>
+        <small style="font-size:11px; opacity:.7;">${meses[i].etiqueta}</small>
+      </div>`).join('');
+    return `
+      <div style="margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <strong>${f.et}</strong>
+          ${subir ? '<small style="color:#ff6b78; font-weight:600;">↑ Subiendo 3 meses seguidos</small>' : ''}
+        </div>
+        <div style="display:flex; gap:6px; align-items:flex-end; height:64px;">${barras}</div>
+      </div>`;
+  }).join('');
 }
 
 let calRef = new Date();
