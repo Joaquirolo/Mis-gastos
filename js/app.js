@@ -271,6 +271,29 @@ document.getElementById('btnUsarCalculadora').addEventListener('click', () => {
   document.getElementById('monto').value = Math.abs(parseFloat(calcExpresion));
   cerrarCalculadora();
 });
+
+document.addEventListener('keydown', e => {
+  const modal = document.getElementById('modalCalculadora');
+  if (!modal.classList.contains('abierto')) return;
+
+  const tecla = e.key;
+  if (/^[0-9]$/.test(tecla) || ['+', '-', '*', '/', '.'].includes(tecla)) {
+    const boton = document.querySelector(`.calc-btn[data-calc="${tecla}"]`);
+    if (boton) { boton.click(); e.preventDefault(); }
+  } else if (tecla === 'Enter' || tecla === '=') {
+    document.querySelector('.calc-btn[data-calc="="]').click();
+    e.preventDefault();
+  } else if (tecla === 'Backspace') {
+    document.querySelector('.calc-btn[data-calc="borrar"]').click();
+    e.preventDefault();
+  } else if (tecla === 'Escape') {
+    cerrarCalculadora();
+    e.preventDefault();
+  } else if (tecla.toLowerCase() === 'c') {
+    document.querySelector('.calc-btn[data-calc="limpiar"]').click();
+    e.preventDefault();
+  }
+});
 document.getElementById('btnNuevo').addEventListener('click', () => {
   irA('inicio');
   form.scrollIntoView({ behavior: 'smooth', block: 'center' });
