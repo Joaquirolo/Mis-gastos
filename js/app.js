@@ -32,8 +32,13 @@ const METODOS = ['Efectivo', 'Yape/Tarjeta'];
 const unificar = m => (m === 'Yape' || m === 'Tarjeta') ? 'Yape/Tarjeta' : m;
 const metodoDe = m => unificar(m.metodo) || 'Sin especificar';
 
-const PALETA = ['#e11d2e', '#ff8a95', '#9f1239', '#f97316', '#6b7280', '#fbbf24', '#be123c', '#a78bfa'];
+const PALETA_MAX = 10; // cuántas categorías distintas se muestran antes de agrupar el resto en "Otros (agrupados)"
 const COLOR_OTROS = '#6b7280';
+function colorPorIndice(i) {
+  // Ángulo dorado: genera un color distinto para cada posición, sin repetirse aunque haya muchas etiquetas
+  const hue = (i * 137.508) % 360;
+  return `hsl(${hue}, 68%, 56%)`;
+}
 const COLOR_METODO = { 'Efectivo': '#ff8a95', 'Yape/Tarjeta': '#e11d2e', 'Sin especificar': '#6b7280' };
 const COLOR_BORDE = { 'Efectivo': '#22c55e', 'Yape/Tarjeta': '#e11d2e', 'Sin especificar': '#6b7280' };
 const ICONO_METODO = { 'Efectivo': ICONOS.wallet, 'Yape/Tarjeta': ICONOS.card, 'Sin especificar': ICONOS.coins };
@@ -851,15 +856,18 @@ document.getElementById('archivoRespaldo').addEventListener('change', e => {
 });
 
 function dona(filas, total, colorDe) {
-  if (!colorDe && filas.length > PALETA.length) {
-    const resto = filas.slice(PALETA.length - 1).reduce((s, f) => s + f[1], 0);
-    filas = filas.slice(0, PALETA.length - 1).concat([['Otros', resto]]);
+  let combinado = false;
+  if (!colorDe && filas.length > PALETA_MAX) {
+    const resto = filas.slice(PALETA_MAX - 1).reduce((s, f) => s + f[1], 0);
+    filas = filas.slice(0, PALETA_MAX - 1).concat([['Otros (agrupados)', resto]]);
+    combinado = true;
   }
   let acum = 0;
   const trozos = [];
   const items = [];
   filas.forEach(([nombre, monto], i) => {
-    const color = colorDe ? colorDe(nombre) : (nombre === 'Otros' ? COLOR_OTROS : PALETA[i % PALETA.length]);
+    const esGrupo = combinado && i === filas.length - 1;
+    const color = colorDe ? colorDe(nombre) : (esGrupo ? COLOR_OTROS : colorPorIndice(i));
     const pct = monto / total * 100;
     const fin = i === filas.length - 1 ? 100 : acum + pct;
     trozos.push(`${color} ${acum}% ${fin}%`);
