@@ -92,7 +92,10 @@
         <div class="tarjeta-titulo"><span class="chip" data-icon="coins"></span><h3>Ahorros</h3></div>
         <div id="resumenAhorros" style="display:flex; flex-direction:column; gap:6px;"></div>
       </div>
-
+       <div class="tarjeta">
+        <div class="tarjeta-titulo"><span class="chip" data-icon="bars"></span><h3>Saldo por método</h3></div>
+        <div id="saldoMetodos" class="metodos-saldo"></div>
+      </div>
       <div class="grid-2">
         <div class="tarjeta">
           <div class="tarjeta-titulo"><span class="chip" data-icon="pie"></span><h3>Gastos por etiqueta</h3></div>
@@ -108,12 +111,7 @@
         <div class="tarjeta-titulo"><span class="chip" data-icon="trend"></span><h3>Tendencia por categoría (6 meses)</h3></div>
         <div id="tendenciaCategorias"></div>
       </div>
-
-      <div class="tarjeta">
-        <div class="tarjeta-titulo"><span class="chip" data-icon="bars"></span><h3>Saldo por método</h3></div>
-        <div id="saldoMetodos" class="metodos-saldo"></div>
-      </div>
-
+      
       <form id="formMov" class="tarjeta">
         <div class="tarjeta-titulo"><span class="chip" data-icon="plus"></span><h3>Nuevo movimiento</h3></div>
         <small class="ayuda" id="avisoEdicion" hidden>✎ Estás editando un movimiento</small>
