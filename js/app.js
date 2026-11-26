@@ -35,9 +35,13 @@ const metodoDe = m => unificar(m.metodo) || 'Sin especificar';
 const PALETA_MAX = 10; // cuántas categorías distintas se muestran antes de agrupar el resto en "Otros (agrupados)"
 const COLOR_OTROS = '#6b7280';
 function colorPorIndice(i) {
-  // Ángulo dorado: genera un color distinto para cada posición, sin repetirse aunque haya muchas etiquetas
-  const hue = (i * 137.508) % 360;
-  return `hsl(${hue}, 68%, 56%)`;
+  // Reparte los colores dentro de un arco cálido acorde a la paleta de la app
+  // (púrpura → rojo → naranja → dorado), usando proporción áurea para que no se agrupen ni se repitan.
+  const frac = (i * 0.618034) % 1;
+  const hue = (250 + frac * 160) % 360;
+  const sat = 62 + (i % 3) * 5;
+  const light = 54 + ((i + 1) % 3) * 6;
+  return `hsl(${hue}, ${sat}%, ${light}%)`;
 }
 const COLOR_METODO = { 'Efectivo': '#ff8a95', 'Yape/Tarjeta': '#e11d2e', 'Sin especificar': '#6b7280' };
 const COLOR_BORDE = { 'Efectivo': '#22c55e', 'Yape/Tarjeta': '#e11d2e', 'Sin especificar': '#6b7280' };
